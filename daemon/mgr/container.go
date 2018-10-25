@@ -511,6 +511,18 @@ func (mgr *ContainerManager) Start(ctx context.Context, id string, options *type
 		return errors.Wrapf(errtypes.ErrNotModified, "container already started")
 	}
 
+	if !c.Config.DisableNetworkFiles {
+		for _, one := range c.Config.Env {
+			arr := strings.SplitN(one, "=", 2)
+			if len(arr) != 2 {
+				continue
+			}
+			if arr[0] == "ali_run_mode" && arr[1] == "vm" {
+				c.Config.DisableNetworkFiles = true
+			}
+		}
+	}
+
 	err = mgr.start(ctx, c, options)
 	if err == nil {
 		mgr.LogContainerEvent(ctx, c, "start")
