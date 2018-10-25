@@ -1415,6 +1415,12 @@
 			"revisionTime": "2017-10-06T17:48:01Z"
 		},
 		{
+			"checksumSHA1": "AYZGozgchqe4WcKH/jCZI1flnP8=",
+			"path": "github.com/magiconair/properties",
+			"revision": "c2353362d570a7bfa228149c62842019201cfb71",
+			"revisionTime": "2018-05-15T20:40:05Z"
+		},
+		{
 			"checksumSHA1": "T8soMJArSZrYnhmdpAnq1bVxQ6Q=",
 			"path": "github.com/mailru/easyjson/buffer",
 			"revision": "2a92e673c9a6302dd05c3a691ae1f24aef46457d",

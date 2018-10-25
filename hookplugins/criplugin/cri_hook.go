@@ -1,8 +1,14 @@
 package criplugin
 
 import (
+	"fmt"
+
 	"github.com/alibaba/pouch/apis/types"
+	critype "github.com/alibaba/pouch/cri/v1alpha2"
 	"github.com/alibaba/pouch/hookplugins"
+
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type criPlugin struct{}
@@ -14,6 +20,15 @@ func init() {
 // PreCreateContainer defines plugin point where receives a container create request, in this plugin point user
 // could the container's config in cri interface.
 func (c *criPlugin) PreCreateContainer(createConfig *types.ContainerCreateConfig, res interface{}) error {
-	// TODO: Implemented by the developer
+	sandboxMeta, ok := res.(*critype.SandboxMeta)
+	if !ok {
+		return fmt.Errorf("invalid object, is not 'SandboxMeta' struct")
+	}
+
+	if err := updateNetworkEnv(createConfig, sandboxMeta); err != nil {
+		return errors.Wrapf(err, "failed to update sandbox: (%s) cni network information to container env", sandboxMeta.ID)
+	}
+	logrus.Debugf("update network env: (%v)", createConfig.Env)
+
 	return nil
 }
