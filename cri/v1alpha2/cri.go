@@ -252,6 +252,10 @@ func (c *CriManager) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 
 	createResp, err := c.ContainerMgr.Create(ctx, sandboxName, createConfig)
 	if err != nil {
+		createResp, err = c.recoverFromCreationConflict(ctx, sandboxName, createConfig, err)
+	}
+
+	if err != nil || createResp == nil {
 		return nil, fmt.Errorf("failed to create a sandbox for pod %q: %v", config.Metadata.Name, err)
 	}
 	id := createResp.ID

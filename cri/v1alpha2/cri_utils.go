@@ -156,6 +156,40 @@ func makeSandboxName(c *runtime.PodSandboxConfig) string {
 	}, nameDelimiter)
 }
 
+// recoverFromCreationConflict
+func (c *CriManager) recoverFromCreationConflict(ctx context.Context, name string, createConfig *apitypes.ContainerCreateConfig, err error) (*apitypes.ContainerCreateResp, error) {
+	if !errtypes.IsAlreadyExisted(err) {
+		return nil, err
+	}
+
+	// get sandbox ID by name
+	container, err := c.ContainerMgr.Get(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	id := container.ID
+
+	logrus.Warnf("Unable to create container due to conflict. Attempting to remove container %q", name)
+
+	// stop container
+	if _, stopErr := c.StopPodSandbox(ctx, &runtime.StopPodSandboxRequest{PodSandboxId: id}); stopErr == nil {
+		logrus.Warnf("Successfully stopped conflicting container %q", name)
+	} else {
+		return nil, fmt.Errorf("Failed to stop the conflicting container %q: %v", name, stopErr)
+	}
+
+	// remove container
+	if _, rmErr := c.RemovePodSandbox(ctx, &runtime.RemovePodSandboxRequest{PodSandboxId: id}); rmErr == nil {
+		logrus.Warnf("Successfully removed conflicting container %q", name)
+	} else {
+		return nil, fmt.Errorf("Failed to remove the conflicting container %q: %v", name, rmErr)
+	}
+
+	// create container
+	logrus.Infof("start to create container %q: %+v", name, createConfig)
+	return c.ContainerMgr.Create(ctx, name, createConfig)
+}
+
 func parseSandboxName(name string) (*runtime.PodSandboxMetadata, error) {
 	format := fmt.Sprintf("%s_%s_${sandbox name}_${sandbox namespace}_${sandbox uid}_${sandbox attempt}", kubePrefix, sandboxContainerName)
 
