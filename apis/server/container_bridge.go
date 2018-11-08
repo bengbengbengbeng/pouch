@@ -101,6 +101,10 @@ func (s *Server) getContainer(ctx context.Context, rw http.ResponseWriter, req *
 		NetworkSettings: c.NetworkSettings,
 	}
 
+	if utils.IsStale(ctx, req) {
+		container.Name = fmt.Sprintf("/%s", container.Name)
+	}
+
 	return EncodeResponse(rw, http.StatusOK, container)
 }
 

@@ -30,6 +30,23 @@ func (s *Server) info(ctx context.Context, rw http.ResponseWriter, req *http.Req
 	if err != nil {
 		return err
 	}
+
+	if utils.IsStale(ctx, req) {
+		ba, err := json.Marshal(info)
+		if err != nil {
+			return err
+		}
+		m := make(map[string]interface{})
+		err = json.Unmarshal(ba, &m)
+		if err != nil {
+			return err
+		}
+		rootDir := m["PouchRootDir"]
+		delete(m, "PouchRootDir")
+		m["DockerRootDir"] = rootDir
+		return EncodeResponse(rw, http.StatusOK, m)
+	}
+
 	return EncodeResponse(rw, http.StatusOK, info)
 }
 
