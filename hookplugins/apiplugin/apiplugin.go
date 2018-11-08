@@ -1,6 +1,8 @@
 package apiplugin
 
 import (
+	"net/http"
+
 	"github.com/alibaba/pouch/apis/server/types"
 	"github.com/alibaba/pouch/hookplugins"
 )
@@ -12,7 +14,40 @@ func init() {
 }
 
 func (a *apiPlugin) UpdateHandler(handlers []*types.HandlerSpec) []*types.HandlerSpec {
-	// TODO: Implemented by the developer
-	// just return the original handlers here
+	i := 0
+	for i < len(handlers) {
+		if removed := updateHandlerSpec(handlers[i]); removed {
+			handlers = append(handlers[:i], handlers[i+1:]...)
+		} else {
+			i++
+		}
+	}
+
+	extraHandlers := []*types.HandlerSpec{
+		// host
+		{Method: http.MethodGet, Path: "/host/exec/result", HandlerFunc: HostExecResultHandler},
+		{Method: http.MethodPost, Path: "/host/exec", HandlerFunc: HostExecHandler},
+	}
+
+	handlers = append(handlers, extraHandlers...)
+
 	return handlers
+}
+
+// updateHandlerSpec update the handler or just remove it.
+func updateHandlerSpec(spec *types.HandlerSpec) (removed bool) {
+	if spec == nil {
+		return true
+	}
+
+	if isContainerRequest(spec.Path) {
+		spec.HandlerFunc = containerRequestWrapper(spec.HandlerFunc)
+	}
+
+	switch spec.Path {
+	case "/version":
+		spec.HandlerFunc = getVersionHandler(spec.HandlerFunc)
+	}
+
+	return false
 }
