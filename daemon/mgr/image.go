@@ -16,12 +16,11 @@ import (
 	"github.com/alibaba/pouch/pkg/jsonstream"
 	"github.com/alibaba/pouch/pkg/reference"
 	"github.com/alibaba/pouch/pkg/utils"
-
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
 	ctrdmetaimages "github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/platforms"
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -522,6 +521,7 @@ func (mgr *ImageManager) containerdImageToImageInfo(ctx context.Context, id dige
 		ociImage    = ctrdImageInfo.OCISpec
 		repoTags    = make([]string, 0)
 		repoDigests = make([]string, 0)
+		createAt    = ""
 	)
 
 	for _, ref := range mgr.localStore.GetReferences(ctrdImageInfo.ID) {
@@ -533,10 +533,14 @@ func (mgr *ImageManager) containerdImageToImageInfo(ctx context.Context, id dige
 		}
 	}
 
+	if ociImage.Created != nil {
+		createAt = ociImage.Created.Format(utils.TimeLayout)
+	}
+
 	return types.ImageInfo{
 		Architecture: ociImage.Architecture,
 		Config:       getImageInfoConfigFromOciImage(ociImage),
-		CreatedAt:    ociImage.Created.Format(utils.TimeLayout),
+		CreatedAt:    createAt,
 		ID:           ctrdImageInfo.ID.String(),
 		Os:           ociImage.OS,
 		RepoDigests:  repoDigests,
