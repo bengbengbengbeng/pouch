@@ -15,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	envDiskQuota = "io.alibaba.pouch.vm.env.diskquota"
+)
+
 func updateNetworkEnv(createConfig *apitypes.ContainerCreateConfig, meta *critype.SandboxMeta) error {
 	// TODO: only support ipv4
 	netNSPath := meta.NetNS
@@ -143,4 +147,20 @@ func GetIPV4NetworkMaskBySize(size int) string {
 	oct3 := (shft & 0x0000ff00) >> 8
 	oct4 := shft & 0x000000ff
 	return strconv.Itoa(oct1) + "." + strconv.Itoa(oct2) + "." + strconv.Itoa(oct3) + "." + strconv.Itoa(oct4)
+}
+
+// setup DiskQuota(or others) for edas, since they won't modify kubelet code,
+// it can be removed until DiskQuota move into cri interface.
+func setupDiskQuota(createConfig *apitypes.ContainerCreateConfig) {
+	for _, e := range createConfig.Env {
+		splits := strings.SplitN(e, "=", 2)
+		if len(splits) != 2 || splits[0] != envDiskQuota {
+			continue
+		}
+		if createConfig.DiskQuota == nil {
+			createConfig.DiskQuota = make(map[string]string)
+		}
+		createConfig.DiskQuota[".*"] = splits[1]
+		createConfig.QuotaID = "-1"
+	}
 }

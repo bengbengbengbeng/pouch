@@ -30,5 +30,9 @@ func (c *criPlugin) PreCreateContainer(createConfig *types.ContainerCreateConfig
 	}
 	logrus.Debugf("update network env: (%v)", createConfig.Env)
 
+	// setup DiskQuota(or others) for edas, since they won't modify kubelet code,
+	// it can be removed until DiskQuota move into cri interface.
+	setupDiskQuota(createConfig)
+
 	return nil
 }
