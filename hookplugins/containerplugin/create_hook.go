@@ -27,13 +27,13 @@ func init() {
 // 4. set user to root if running in rich container mode
 // 5. convert label DiskQuota to DiskQuota in ContainerConfig parameter
 // 6. in rich container mode, change ali_run_mode=common_vm to ali_run_mode=vm
-// 7. in rich container mode, convert 3 lables to env
+// 7. in rich container mode, convert 3 labels to env
 // 8. in rich container mode, add some capabilities by default
 // 9. in rich container mode, don't bind /etc/hosts /etc/hostname /etc/resolv.conf files into container
 // 10. in rich container mode, set ShmSize to half of the limit of memory
 // 11. generate quota id as needed
 // 12. set HOSTNAME env if HostName specified
-// 13. if VolumesFrom specifed and the container name has a prefix of slash, trim it
+// 13. if VolumesFrom specified and the container name has a prefix of slash, trim it
 // 14. add net-priority into spec-annotations
 func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error {
 	logrus.Infof("pre create method called")

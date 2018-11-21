@@ -94,7 +94,7 @@ func (suite *PouchRunSuite) TestRunDiskQuotaForAllDirsWithoutQuotaId(c *check.C)
 	cmd = "df | grep mnt1"
 	out := command.PouchRun("exec", name, "sh", "-c", cmd).Stdout()
 	if !strings.Contains(out, expectedstring) {
-		c.Errorf("%s should containes %s", out, expectedstring)
+		c.Errorf("%s should contains %s", out, expectedstring)
 	}
 }
 
