@@ -34,6 +34,19 @@ func (suite *PouchRunDNSSuite) TearDownTest(c *check.C) {
 func (suite *PouchRunDNSSuite) TestRunWithUserDefinedNetwork(c *check.C) {
 	cname := "TestRunWithUserDefinedNetwork"
 
+	// get host nameserver
+	var nameserver string
+	ret := icmd.RunCommand("cat", "/etc/resolv.conf")
+	ret.Assert(c, icmd.Success)
+	for _, line := range strings.Split(ret.Stdout(), "\n") {
+		if strings.Contains(line, "nameserver") {
+			nameserver = line
+		}
+	}
+	if nameserver == "" {
+		c.Fatalf("can not get host resolve nameserver")
+	}
+
 	// Create a user-defined network
 	command.PouchRun("network", "create", "--name", cname,
 		"-d", "bridge",
@@ -48,7 +61,7 @@ func (suite *PouchRunDNSSuite) TestRunWithUserDefinedNetwork(c *check.C) {
 	res.Assert(c, icmd.Success)
 	defer DelContainerForceMultyTime(c, cname)
 
-	c.Assert(strings.Contains(res.Stdout(), "nameserver 127.0.0.11"), check.Equals, true)
+	c.Assert(strings.Contains(res.Stdout(), nameserver), check.Equals, true)
 }
 
 // TestRunWithBridgeNetwork tests disabling libnetwork resolver if not user-defined network.

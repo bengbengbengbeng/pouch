@@ -42,7 +42,10 @@ func (c *contPlugin) PreUpdate(in io.ReadCloser) (io.ReadCloser, error) {
 	var updateConfigInternal UpdateConfigInternal
 	err = json.NewDecoder(bytes.NewReader(inputBuffer)).Decode(&updateConfigInternal)
 	if err != nil {
-		return nil, err
+		// if can't decode by UpdateConfigInternal,
+		// we just pass it into pouch daemon to deal with it.
+		logrus.Warn("failed to decode update body, pass it into pouch daemon")
+		return ioutil.NopCloser(bytes.NewReader(inputBuffer)), nil
 	}
 
 	var diskQuota map[string]string

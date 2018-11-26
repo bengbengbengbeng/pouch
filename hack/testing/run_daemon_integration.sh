@@ -49,7 +49,7 @@ main() {
   local cmd flags
   cmd="pouchd-integration"
   flags=" -test.coverprofile=${coverage_profile} DEVEL"
-  flags="${flags} --debug --enable-lxcfs --add-runtime runv=runv"
+  flags="${flags} --add-runtime runv=runv"
 
   integration::stop_local_persist
   integration::run_local_persist_background "${local_persist_log}"

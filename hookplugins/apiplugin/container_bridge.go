@@ -2,6 +2,10 @@ package apiplugin
 
 import (
 	"context"
+	"net/http"
+	"runtime"
+	"strings"
+
 	"github.com/alibaba/pouch/apis/server"
 	serverTypes "github.com/alibaba/pouch/apis/server/types"
 	"github.com/alibaba/pouch/apis/types"
@@ -9,9 +13,6 @@ import (
 	"github.com/alibaba/pouch/pkg/utils"
 	"github.com/alibaba/pouch/version"
 	"github.com/gorilla/mux"
-	"net/http"
-	"runtime"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -34,6 +35,10 @@ func getVersionHandler(_ serverTypes.Handler) serverTypes.Handler {
 			KernelVersion: kernelVersion,
 			Os:            runtime.GOOS,
 			Version:       version.Version,
+		}
+
+		if utils.IsStale(ctx, req) {
+			v.Version = "1.12.6"
 		}
 
 		return server.EncodeResponse(w, http.StatusOK, v)

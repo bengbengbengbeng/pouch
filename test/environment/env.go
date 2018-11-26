@@ -173,7 +173,7 @@ func IsLxcfsEnabled() bool {
 	if icmd.RunCommand("pgrep", "lxcfs").ExitCode != 0 {
 		return false
 	}
-	cmd := "ps -ef |grep pouchd |grep \"enable\\-lxcfs\""
+	cmd := `grep "enable-lxcfs" /etc/pouch/config.json | grep -q "true"`
 	if icmd.RunCommand("sh", "-c", cmd).ExitCode != 0 {
 		return false
 	}

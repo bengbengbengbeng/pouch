@@ -16,6 +16,11 @@ import (
 	"github.com/gotestyourself/gotestyourself/icmd"
 )
 
+var (
+	origPath = "/etc/pouch/config.json"
+	backPath = "/etc/pouch/config.json.pouchtest.bak"
+)
+
 // PouchDaemonSuite is the test suite fo daemon.
 type PouchDaemonSuite struct{}
 
@@ -23,9 +28,25 @@ func init() {
 	check.Suite(&PouchDaemonSuite{})
 }
 
+func backupConfigFile() {
+	os.Rename(origPath, backPath)
+}
+
+func restoreConfig() {
+	os.Rename(backPath, origPath)
+}
+
 // SetUpTest does common setup in the beginning of each test.
 func (suite *PouchDaemonSuite) SetUpTest(c *check.C) {
 	SkipIfFalse(c, environment.IsLinux)
+	fmt.Printf("pre-start test")
+
+	backupConfigFile()
+}
+
+func (suite *PouchDaemonSuite) TearDownTest(c *check.C) {
+	fmt.Printf("post-start test")
+	restoreConfig()
 }
 
 // TestDaemonCgroupParent tests daemon with cgroup parent
@@ -75,6 +96,9 @@ func (suite *PouchDaemonSuite) TestDaemonCgroupParent(c *check.C) {
 
 // TestDaemonListenTCP tests daemon listen with tcp address.
 func (suite *PouchDaemonSuite) TestDaemonListenTCP(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	// Start a test daemon with test args.
 	listeningPorts := [][]string{
 		{"0.0.0.0", "0.0.0.0", "1236"},
@@ -167,6 +191,9 @@ func (suite *PouchDaemonSuite) TestDaemonNestObjectConflict(c *check.C) {
 
 // TestDaemonSliceFlagNotConflict tests start daemon with configure file contains slice flag will not conflicts with parameter.
 func (suite *PouchDaemonSuite) TestDaemonSliceFlagNotConflict(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	path := "/tmp/pouch_slice.json"
 	cfg := struct {
 		Labels []string `json:"label"`
@@ -357,6 +384,9 @@ func (suite *PouchDaemonSuite) TestDaemonLabelNeg(c *check.C) {
 
 // TestDaemonDefaultRegistry tests set default registry works.
 func (suite *PouchDaemonSuite) TestDaemonDefaultRegistry(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	dcfg, err := StartDefaultDaemonDebug(
 		"--default-registry",
 		"reg.docker.alibaba-inc.com",
@@ -374,6 +404,9 @@ func (suite *PouchDaemonSuite) TestDaemonDefaultRegistry(c *check.C) {
 
 // TestDaemonCriEnabled tests enabling cri part in pouchd.
 func (suite *PouchDaemonSuite) TestDaemonCriEnabled(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	dcfg, err := StartDefaultDaemonDebug(
 		"--enable-cri")
 	c.Assert(err, check.IsNil)
@@ -387,6 +420,9 @@ func (suite *PouchDaemonSuite) TestDaemonCriEnabled(c *check.C) {
 
 // TestDaemonTlsVerify tests start daemon with TLS verification enabled.
 func (suite *PouchDaemonSuite) TestDaemonTlsVerify(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	SkipIfFalse(c, IsTLSExist)
 	dcfg := daemon.NewConfig()
 	dcfg.Listen = ""
@@ -430,6 +466,9 @@ func (suite *PouchDaemonSuite) TestDaemonTlsVerify(c *check.C) {
 
 // TestDaemonStartOverOneTimes tests start daemon over one times should fail.
 func (suite *PouchDaemonSuite) TestDaemonStartOverOneTimes(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	dcfg1 := daemon.NewConfig()
 	dcfg1.Listen = ""
 	addr1 := "unix:///var/run/pouchtest1.sock"
@@ -453,6 +492,9 @@ func (suite *PouchDaemonSuite) TestDaemonStartOverOneTimes(c *check.C) {
 
 // TestDaemonWithMultiRuntimes tests start daemon with multiple runtimes
 func (suite *PouchDaemonSuite) TestDaemonWithMultiRuntimes(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	dcfg1, err := StartDefaultDaemonDebug(
 		"--add-runtime", "foo=bar")
 	c.Assert(err, check.IsNil)
