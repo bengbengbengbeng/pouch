@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/alibaba/pouch/apis/metrics"
 	"github.com/alibaba/pouch/hookplugins"
 
 	"github.com/sirupsen/logrus"
@@ -45,6 +46,17 @@ func (d *daemonPlugin) PreStartHook() error {
 	} else {
 		logrus.Infof("daemon_prestart output %s", string(b))
 	}
+
+	// check the consistency of environment
+	status := 0
+	if err := checkEnvConsistency(homeDir); err != nil {
+		logrus.Errorf("the environment is not consistent, %v", err)
+		metrics.EnvStatus.WithLabelValues("consistency").Set(1)
+		status = 1
+	} else {
+		metrics.EnvStatus.WithLabelValues("consistency").Set(0)
+	}
+	logrus.Infof("check the consistency of environment, %v", status)
 	go activePlugins()
 	return nil
 }

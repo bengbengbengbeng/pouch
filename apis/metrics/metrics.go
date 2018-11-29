@@ -39,6 +39,9 @@ var (
 
 	// EngineVersion records the version and commit information of the engine process.
 	EngineVersion = metrics.NewLabelGauge(subsystemPouch, "engine", "The version and commit information of the engine process", "commit")
+
+	// EnvStatus records whether the environment is consistent or not.
+	EnvStatus = metrics.NewLabelGauge(subsystemPouch, "environment_status", "The consistency of environment", "environment")
 )
 
 var registerMetrics sync.Once
@@ -57,5 +60,6 @@ func Register() {
 		registry.MustRegister(ImageSuccessActionsCounter)
 		registry.MustRegister(ContainerActionsTimer)
 		registry.MustRegister(ImageActionsTimer)
+		registry.MustRegister(EnvStatus)
 	})
 }
