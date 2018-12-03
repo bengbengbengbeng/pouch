@@ -14,6 +14,7 @@ import (
 
 	"github.com/alibaba/pouch/apis/types"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -77,7 +78,10 @@ func prepareNetwork(requestedIP, defaultRoute, mask, nic string, networkMode str
 	nwIf := nic
 
 	if requestedIP == "" || defaultRoute == "" || mask == "" || nic == "" {
-		return
+		if checkNatBridge() {
+			return
+		}
+		return nwName, errors.Errorf("bridge network must set -e RequestedIP, -e DefaultRoute, -e DefaultMask, -e DefaultNic")
 	}
 
 	if nic == "bond0" || nic == "docker0" {
@@ -159,6 +163,21 @@ func getAllNetwork() (nr []types.NetworkResource, err error) {
 		return
 	}
 	return
+}
+
+func checkNatBridge() bool {
+	content, err := ioutil.ReadFile("/etc/vlan.conf")
+	if err != nil {
+		return false
+	}
+
+	for _, line := range bytes.Split(content, []byte{'\n'}) {
+		if bytes.Contains(line, []byte("nat")) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func CreateNetwork(c *types.NetworkCreateConfig) error {

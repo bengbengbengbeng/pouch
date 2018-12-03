@@ -48,11 +48,24 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	}
 	networkMode := createConfig.HostConfig.NetworkMode
 
-	//setup network just in case
+	//setup network just in case, skip container/host/node mode network.
 	if !strings.HasPrefix(networkMode, "container:") && networkMode != "host" && networkMode != "none" {
+		// check --must-requested-ip in config file: /etc/sysconfig/pouch
+		if mustRequestedIP() {
+			if len(requestedIP) == 0 {
+				return fmt.Errorf("-e RequestedIP not set")
+			}
+			for _, oneIp := range strings.Split(requestedIP, ",") {
+				if net.ParseIP(oneIp) == nil {
+					return fmt.Errorf("-e RequestedIP=%s is invalid", requestedIP)
+				}
+			}
+		}
+
 		defaultRoute := getEnv(env, "DefaultRoute")
 		mask := getEnv(env, "DefaultMask")
 		nic := getEnv(env, "DefaultNic")
+
 		if createConfig.NetworkingConfig == nil {
 			createConfig.NetworkingConfig = &types.NetworkingConfig{}
 		}
@@ -65,17 +78,6 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 			return e
 		} else if nwName != networkMode {
 			createConfig.HostConfig.NetworkMode = nwName
-		}
-
-		if mustRequestedIP() {
-			if len(requestedIP) == 0 {
-				return fmt.Errorf("-e RequestedIP not set")
-			}
-			for _, oneIp := range strings.Split(requestedIP, ",") {
-				if net.ParseIP(oneIp) == nil {
-					return fmt.Errorf("-e RequestedIP=%s is invalid", requestedIP)
-				}
-			}
 		}
 	}
 
