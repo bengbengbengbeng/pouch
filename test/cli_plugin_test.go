@@ -34,14 +34,14 @@ func (suite *PouchRunSuite) TestRunQuotaId(c *check.C) {
 		c.Skip("Host does not support disk quota")
 	}
 	name := "TestRunQuotaId"
-	Id := "16777216"
+	ID := "16777216"
 
-	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "QuotaId="+Id, busyboxImage, "top")
+	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "QuotaId="+ID, busyboxImage, "top")
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
 	output := command.PouchRun("inspect", "-f", "{{.Config.Labels.QuotaId}}", name).Stdout()
-	c.Assert(strings.TrimSpace(output), check.Equals, Id)
+	c.Assert(strings.TrimSpace(output), check.Equals, ID)
 
 }
 
@@ -50,14 +50,14 @@ func (suite *PouchRunSuite) TestRunAutoQuotaId(c *check.C) {
 		c.Skip("Host does not support disk quota")
 	}
 	name := "TestRunAutoQuotaId"
-	AutoQuotaIdValue := "true"
+	AutoQuotaIDValue := "true"
 
-	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "AutoQuotaId="+AutoQuotaIdValue, busyboxImage, "top")
+	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "AutoQuotaId="+AutoQuotaIDValue, busyboxImage, "top")
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
 	output := command.PouchRun("inspect", "-f", "{{.Config.Labels.AutoQuotaId}}", name).Stdout()
-	c.Assert(strings.TrimSpace(output), check.Equals, AutoQuotaIdValue)
+	c.Assert(strings.TrimSpace(output), check.Equals, AutoQuotaIDValue)
 }
 
 // TestRunDiskQuotaForAllDirsWithoutQuotaId: quota-id(<0) disk-quota:.*=10GB
@@ -97,4 +97,3 @@ func (suite *PouchRunSuite) TestRunDiskQuotaForAllDirsWithoutQuotaId(c *check.C)
 		c.Errorf("%s should contains %s", out, expectedstring)
 	}
 }
-

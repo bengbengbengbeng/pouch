@@ -138,6 +138,7 @@ func getContainerGateway(netnsPath, interfaceName string) (string, error) {
 	return ip.String(), nil
 }
 
+// GetIPV4NetworkMaskBySize gets IPv4 network mask by size
 func GetIPV4NetworkMaskBySize(size int) string {
 	// Java makes the sign bit sticky on a shift
 	shft := 0xffffffff << uint(32-size)

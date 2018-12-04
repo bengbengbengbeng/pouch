@@ -29,7 +29,7 @@ type requestResult struct {
 	Msg      string `json:"msg"`
 	Stderr   string `json:"stderr"`
 	Stdout   string `json:"stdout"`
-	Id       string `json:"id"`
+	ID       string `json:"id"`
 	ExitCode int    `json:"exitCode"`
 }
 
@@ -121,7 +121,7 @@ func runInNewSession() {
 	os.Exit(exitCode)
 }
 
-func writeJson(w http.ResponseWriter, obj interface{}) {
+func writeJSON(w http.ResponseWriter, obj interface{}) {
 	b, e := json.Marshal(obj)
 	if e != nil {
 		logrus.Errorf("json marshal error. %v", e)
@@ -138,7 +138,7 @@ func writeEx(w http.ResponseWriter, obj requestResult, e error, extra string) {
 	obj.Msg = e.Error()
 	obj.Success = false
 	w.WriteHeader(http.StatusInternalServerError)
-	writeJson(w, obj)
+	writeJSON(w, obj)
 }
 
 func writeExCallback(w http.ResponseWriter, obj callbackResult, e error, extra string) {
@@ -146,9 +146,10 @@ func writeExCallback(w http.ResponseWriter, obj callbackResult, e error, extra s
 	obj.Msg = e.Error()
 	obj.Success = false
 	w.WriteHeader(http.StatusInternalServerError)
-	writeJson(w, obj)
+	writeJSON(w, obj)
 }
 
+// HostExecHandler is the handler for POST /host/exec
 func HostExecHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -165,12 +166,12 @@ func HostExecHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 		logrus.Errorf("read host exec body error. %v", e)
 		w.WriteHeader(http.StatusBadRequest)
 		result.Msg = "read body error " + e.Error()
-		writeJson(w, result)
+		writeJSON(w, result)
 		return
 	}
 
 	id := stringid.GenerateNonCryptoID()
-	result.Id = id
+	result.ID = id
 	e = ioutil.WriteFile("/tmp/exec/"+id, b, 0777)
 	if e != nil {
 		writeEx(w, result, e, id+" generate shell file")
@@ -203,7 +204,7 @@ func HostExecHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 		logrus.Errorf("failed. %v", e)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		result.Msg = "exec failed.  " + e.Error()
-		writeJson(w, result)
+		writeJSON(w, result)
 		return
 	}
 
@@ -231,7 +232,7 @@ func HostExecHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	if async {
 		result.Success = true
-		writeJson(w, result)
+		writeJSON(w, result)
 		go func() {
 			<-finishChan
 			for ex := range errChan {
@@ -241,42 +242,44 @@ func HostExecHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 			}
 		}()
 		return
-	} else {
-		<-finishChan
-		for ex := range errChan {
-			if ex != nil {
-				logrus.Errorf("%s command run error. %v", id, ex)
-				writeEx(w, result, ex, id+" exec")
-				return
-			}
-		}
-
-		stdByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".stdout")
-		if e != nil {
-			writeEx(w, result, e, id+" read stdout file")
-			return
-		}
-
-		errByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".stderr")
-		if e != nil {
-			writeEx(w, result, e, id+" read stderr file")
-			return
-		}
-
-		exitByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".done")
-		if e == nil {
-			exitCode := strings.TrimSpace(string(exitByte))
-			result.ExitCode, e = strconv.Atoi(exitCode)
-		}
-
-		result.Success = true
-		result.Stdout = string(stdByte)
-		result.Stderr = string(errByte)
-		writeJson(w, result)
 	}
+
+	<-finishChan
+	for ex := range errChan {
+		if ex != nil {
+			logrus.Errorf("%s command run error. %v", id, ex)
+			writeEx(w, result, ex, id+" exec")
+			return
+		}
+	}
+
+	stdByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".stdout")
+	if e != nil {
+		writeEx(w, result, e, id+" read stdout file")
+		return
+	}
+
+	errByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".stderr")
+	if e != nil {
+		writeEx(w, result, e, id+" read stderr file")
+		return
+	}
+
+	exitByte, e := ioutil.ReadFile("/tmp/exec/" + id + ".done")
+	if e == nil {
+		exitCode := strings.TrimSpace(string(exitByte))
+		result.ExitCode, _ = strconv.Atoi(exitCode)
+	}
+
+	result.Success = true
+	result.Stdout = string(stdByte)
+	result.Stderr = string(errByte)
+	writeJSON(w, result)
+
 	return
 }
 
+// HostExecResultHandler is the handler for GET /host/exec/result
 func HostExecResultHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -289,14 +292,14 @@ func HostExecResultHandler(ctx context.Context, w http.ResponseWriter, r *http.R
 	if len(id) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		result.Msg = "id is required"
-		writeJson(w, result)
+		writeJSON(w, result)
 		return
 	}
 
 	if fi, ex := os.Stat("/tmp/exec/" + id); ex != nil || fi.IsDir() {
 		w.WriteHeader(http.StatusBadRequest)
 		result.Msg = "id is not exist"
-		writeJson(w, result)
+		writeJSON(w, result)
 		return
 	}
 
@@ -304,7 +307,7 @@ func HostExecResultHandler(ctx context.Context, w http.ResponseWriter, r *http.R
 		result.Done = true
 		if bArr, e := ioutil.ReadFile("/tmp/exec/" + id + ".done"); e == nil {
 			exitCode := strings.TrimSpace(string(bArr))
-			result.ExitCode, ex = strconv.Atoi(exitCode)
+			result.ExitCode, _ = strconv.Atoi(exitCode)
 		}
 	}
 
@@ -329,7 +332,7 @@ func HostExecResultHandler(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	result.Success = true
-	writeJson(w, result)
+	writeJSON(w, result)
 	return
 }
 

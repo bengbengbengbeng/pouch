@@ -55,8 +55,8 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 			if len(requestedIP) == 0 {
 				return fmt.Errorf("-e RequestedIP not set")
 			}
-			for _, oneIp := range strings.Split(requestedIP, ",") {
-				if net.ParseIP(oneIp) == nil {
+			for _, oneIP := range strings.Split(requestedIP, ",") {
+				if net.ParseIP(oneIP) == nil {
 					return fmt.Errorf("-e RequestedIP=%s is invalid", requestedIP)
 				}
 			}
@@ -83,22 +83,21 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 
 	// generate admin uid
 	if getEnv(createConfig.Env, "ali_admin_uid") == "0" && requestedIP != "" {
-		if b, ex := exec.Command("/opt/ali-iaas/pouch/bin/get_admin_uid.sh",
-			requestedIP).CombinedOutput(); ex != nil {
+		b, ex := exec.Command("/opt/ali-iaas/pouch/bin/get_admin_uid.sh", requestedIP).CombinedOutput()
+		if ex != nil {
 			logrus.Errorf("get admin uid error, ip is %s, error is %v", requestedIP, ex)
 			return ex
-		} else {
-			if uid, ex := strconv.Atoi(strings.TrimSpace(string(b))); ex != nil {
-				logrus.Errorf("get admin uid error, ip is %s, error is %v", requestedIP, ex)
-				return ex
-			} else {
-				for i, oneEnv := range createConfig.Env {
-					arr := strings.SplitN(oneEnv, "=", 2)
-					if len(arr) == 2 && arr[0] == "ali_admin_uid" {
-						createConfig.Env[i] = fmt.Sprintf("%s=%d", arr[0], uid)
-						break
-					}
-				}
+		}
+		uid, ex := strconv.Atoi(strings.TrimSpace(string(b)))
+		if ex != nil {
+			logrus.Errorf("get admin uid error, ip is %s, error is %v", requestedIP, ex)
+			return ex
+		}
+		for i, oneEnv := range createConfig.Env {
+			arr := strings.SplitN(oneEnv, "=", 2)
+			if len(arr) == 2 && arr[0] == "ali_admin_uid" {
+				createConfig.Env[i] = fmt.Sprintf("%s=%d", arr[0], uid)
+				break
 			}
 		}
 	}
@@ -173,7 +172,7 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	}
 
 	// generate quota id as needed
-	if createConfig.Labels["AutoQuotaId"] == "true" || (diskQuota != "" &&
+	if createConfig.Labels["AutoQuotaId"] == optionOn || (diskQuota != "" &&
 		!strings.Contains(diskQuota, ";") && !strings.Contains(diskQuota, "=")) {
 		if createConfig.QuotaID == "" || createConfig.QuotaID == "0" {
 			qid := createConfig.Labels["QuotaId"]

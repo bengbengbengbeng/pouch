@@ -22,12 +22,11 @@ type consistencyConfig struct {
 // check the consistency of environment
 func checkEnvConsistency(pouchRootDir string) error {
 	// 1. check the kernel version
-	kernelVersion := "unknown"
 	version, err := kernel.GetKernelVersion()
 	if err != nil {
 		return fmt.Errorf("Could not get kernel version: %v", err)
 	}
-	kernelVersion = version.String()
+	kernelVersion := version.String()
 
 	// 2. check the hotfixes
 	if err := checkHotfixes(kernelVersion); err != nil {

@@ -27,14 +27,14 @@ func (c *contPlugin) PreStart(interface{}) ([]int, [][]string, error) {
 // 3. generate priority for the network interface
 func (c *contPlugin) PreCreateEndpoint(cid string, env []string, endpoint *networktypes.Endpoint) error {
 	genericParam := make(map[string]interface{})
-	if getEnv(env, "OverlayNetwork") == "true" {
-		genericParam["OverlayNetwork"] = "true"
+	if getEnv(env, "OverlayNetwork") == optionOn {
+		genericParam["OverlayNetwork"] = optionOn
 		genericParam["OverlayTunnelId"] = getEnv(env, "OverlayTunnelId")
 		genericParam["OverlayGwIp"] = getEnv(env, "OverlayGwIp")
 	}
 
-	if getEnv(env, "VpcECS") == "true" {
-		genericParam["VpcECS"] = "true"
+	if getEnv(env, "VpcECS") == optionOn {
+		genericParam["VpcECS"] = optionOn
 	}
 
 	for _, oneEnv := range env {
@@ -48,7 +48,7 @@ func (c *contPlugin) PreCreateEndpoint(cid string, env []string, endpoint *netwo
 		if strings.Contains(ip, ",") {
 			ip = strings.Split(ip, ",")[0]
 		}
-		genericParam[MacAddress] = GenerateMACFromIP(net.ParseIP(ip))
+		genericParam[macAddress] = GenerateMACFromIP(net.ParseIP(ip))
 	}
 
 	endpoint.Priority = int(finalPoint.Unix() - time.Now().Unix())

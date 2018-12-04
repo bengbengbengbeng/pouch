@@ -43,9 +43,8 @@ func (d *daemonPlugin) PreStartHook() error {
 	b, e := exec.Command("/opt/ali-iaas/pouch/bin/daemon_prestart.sh", homeDir).CombinedOutput()
 	if e != nil {
 		return fmt.Errorf("daemon prestart execute error. %s %v", string(b), e)
-	} else {
-		logrus.Infof("daemon_prestart output %s", string(b))
 	}
+	logrus.Infof("daemon_prestart output %s", string(b))
 
 	// check the consistency of environment
 	status := 0
@@ -67,8 +66,7 @@ func (d *daemonPlugin) PreStopHook() error {
 	b, e := exec.Command("/opt/ali-iaas/pouch/bin/daemon_prestop.sh").CombinedOutput()
 	if e != nil {
 		return e
-	} else {
-		logrus.Infof("daemon_prestop output %s", string(b))
 	}
+	logrus.Infof("daemon_prestop output %s", string(b))
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/alibaba/pouch/apis/types"
@@ -17,7 +16,6 @@ import (
 )
 
 var (
-	networkLock sync.Mutex
 	pouchClient = http.Client{
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
@@ -65,7 +63,7 @@ func setupEnv() {
 			if bytes.Contains(line, []byte("--set-env")) && !bytes.HasPrefix(line, []byte("#")) {
 				splitByComma := bytes.Contains(line, []byte("--set-env-comma"))
 				splitChar := byte(' ')
-				index := -1
+				var index int
 				if splitByComma {
 					index = bytes.Index(line, []byte("--set-env-comma"))
 					if index != -1 {

@@ -125,7 +125,7 @@ func activePluginsOnce() {
 			plugin := fmt.Sprintf("/opt/ali-iaas/pouch/plugins/%s", one)
 			activeOne := osexec.Cmd{
 				Path:   plugin,
-				Args:   []string{plugin, getNodeIp()},
+				Args:   []string{plugin, getNodeIP()},
 				Stdout: f,
 				Stderr: f,
 			}
@@ -154,7 +154,7 @@ func activePluginsOnce() {
 	}
 }
 
-func getNodeIp() string {
+func getNodeIP() string {
 	if b, e := osexec.Command("hostname", "-i").CombinedOutput(); e == nil {
 		scanner := bufio.NewScanner(bytes.NewReader(b))
 		for scanner.Scan() {

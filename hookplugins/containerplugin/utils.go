@@ -45,13 +45,13 @@ func getEnv(env []string, key string) string {
 }
 
 func addParamsForOverlay(m map[string]string, env []string) {
-	if getEnv(env, "OverlayNetwork") == "true" {
-		m["OverlayNetwork"] = "true"
+	if getEnv(env, "OverlayNetwork") == optionOn {
+		m["OverlayNetwork"] = optionOn
 		m["OverlayTunnelId"] = getEnv(env, "OverlayTunnelId")
 		m["OverlayGwIp"] = getEnv(env, "OverlayGwIp")
 	}
-	if getEnv(env, "VpcECS") == "true" {
-		m["VpcECS"] = "true"
+	if getEnv(env, "VpcECS") == optionOn {
+		m["VpcECS"] = optionOn
 	}
 	for _, oneEnv := range env {
 		arr := strings.SplitN(oneEnv, "=", 2)
@@ -180,6 +180,7 @@ func checkNatBridge() bool {
 	return false
 }
 
+// CreateNetwork create a network through pouch client
 func CreateNetwork(c *types.NetworkCreateConfig) error {
 	var rw bytes.Buffer
 	err := json.NewEncoder(&rw).Encode(c)
@@ -204,15 +205,16 @@ func CreateNetwork(c *types.NetworkCreateConfig) error {
 }
 
 func mustRequestedIP() bool {
-	if b, err := ioutil.ReadFile("/etc/sysconfig/pouch"); err != nil {
+	b, err := ioutil.ReadFile("/etc/sysconfig/pouch")
+	if err != nil {
 		return false
-	} else {
-		for _, line := range bytes.Split(b, []byte{'\n'}) {
-			if bytes.Contains(line, []byte("--must-requested-ip")) && !bytes.HasPrefix(line, []byte("#")) {
-				return true
-			}
+	}
+	for _, line := range bytes.Split(b, []byte{'\n'}) {
+		if bytes.Contains(line, []byte("--must-requested-ip")) && !bytes.HasPrefix(line, []byte("#")) {
+			return true
 		}
 	}
+
 	return false
 }
 
