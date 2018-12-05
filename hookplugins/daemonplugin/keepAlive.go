@@ -138,7 +138,9 @@ func activePluginsOnce() {
 				} else {
 					activeOne.Args = []string{
 						plugin,
-						"-s", "/run/pouch/plugins/nvidia-docker/"}
+						// because the sock of alinet is hardcode /run/docker/
+						// nvidia-docker use /run/docker/ too.
+						"-s", "/run/docker/plugins/nvidia-docker/"}
 				}
 			}
 			if e = activeOne.Start(); e != nil {
