@@ -152,7 +152,8 @@ func runDaemon(cmd *cobra.Command) error {
 		fmt.Printf("pouchd version: %s, build: %s, build at: %s\n", version.Version, version.GitCommit, version.BuildTime)
 		return nil
 	}
-	metrics.EngineVersion.WithLabelValues(version.GitCommit).Set(1)
+	metrics.EngineVersion.WithLabelValues(
+		fmt.Sprintf("%s BUILDTIME:%s Pouch", version.GitCommit, version.BuildTime)).Set(1)
 	// initialize log.
 	initLog()
 
