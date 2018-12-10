@@ -2150,6 +2150,9 @@ definitions:
       WorkingDir:
         description: "The working directory for commands to run in."
         type: "string"
+      Home:
+        description: "The upper directory for container."
+        type: "string"
       Entrypoint:
         description: |
           The entry point for the container as a string or an array of strings.
