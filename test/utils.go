@@ -18,6 +18,7 @@ var (
 	busyboxImage125             string
 	helloworldImage             string
 	helloworldImageOnlyRepoName = "hello-world"
+	Image7u                     string
 
 	// GateWay test gateway
 	testGateWay string
@@ -50,6 +51,7 @@ func init() {
 	busyboxImageID = environment.BusyboxRepo + ":" + environment.BusyboxID
 	busyboxImage125 = environment.BusyboxRepo + ":" + environment.Busybox125Tag
 	helloworldImage = environment.HelloworldRepo + ":" + environment.HelloworldTag
+	Image7u = environment.Image7uRepo + ":" + environment.Image7uTag
 
 	// init network test config
 	environment.GetTestNetwork()
