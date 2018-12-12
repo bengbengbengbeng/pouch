@@ -221,11 +221,13 @@ func (suite *PouchRunSuite) TestCapabilitiesInRichContainer(c *check.C) {
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
-	expectedstring := "SYS_RESOURCE SYS_MODULE SYS_PTRACE SYS_PACCT NET_ADMIN SYS_ADMIN"
+	expectedstrings := [6]string{"SYS_RESOURCE", "SYS_MODULE", "SYS_PTRACE", "SYS_PACCT", "NET_ADMIN", "SYS_ADMIN"}
 	output := command.PouchRun("inspect", "-f", "{{.HostConfig.CapAdd}}", name).Stdout()
 
-	if !strings.Contains(output, expectedstring) {
-		c.Errorf("%s should contains %s", output, expectedstring)
+	for _, value := range expectedstrings {
+		if !strings.Contains(output, value) {
+			c.Errorf("%s should contains %s", output, value)
+		}
 	}
 }
 
