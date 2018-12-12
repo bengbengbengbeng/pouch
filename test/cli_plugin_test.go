@@ -116,8 +116,8 @@ func (suite *PouchRunSuite) TestDefaultNetworkMode(c *check.C) {
 func (suite *PouchRunSuite) TestUidFromIp(c *check.C) {
 	name := "TestUidFromIp"
 	endingnumber := 13 // uid=500+13=513
-	FakeIp := "192.168.5." + strconv.Itoa(endingnumber)
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=vm", "-e", "RequestedIP="+FakeIp, "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	FakeIP := "192.168.5." + strconv.Itoa(endingnumber)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=vm", "-e", "RequestedIP="+FakeIP, "--env", "ali_admin_uid=0", "--name", name, Image7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -268,7 +268,7 @@ func (suite *PouchRunSuite) TestSetHostnameEnv(c *check.C) {
 	}
 }
 
-// TestTrimPrefixContainerSlash: if VolumesFrom specifed and the container name has a prefix of slash, trim it
+// TestTrimPrefixContainerSlash: if VolumesFrom specified and the container name has a prefix of slash, trim it
 func (suite *PouchRunSuite) TestTrimPrefixContainerSlash(c *check.C) {
 	con1name := "TestTrimPrefixContainerSlashcon1"
 	con2name := "TestTrimPrefixContainerSlashcon2"
