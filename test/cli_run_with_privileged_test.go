@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
 	"github.com/alibaba/pouch/test/util"
@@ -55,14 +53,7 @@ func (suite *PouchRunPrivilegedSuite) TestRunCheckProcWritableWithAndWithoutPriv
 	res := command.PouchRun("run", "--name", name1, busyboxImage, "sh", "-c", "touch /proc/sysrq-trigger")
 	defer DelContainerForceMultyTime(c, name1)
 
-	if res.ExitCode == 0 {
-		c.Errorf("non-privileged container executes touch /proc/sysrq-trigger should failed, but succeeded: %v", res.Combined())
-	}
-
-	expected := "Read-only file system"
-	if out := res.Combined(); !strings.Contains(out, expected) {
-		c.Errorf("expected %s, but got %s", expected, out)
-	}
+	c.Assert(util.PartialEqual(res.Combined(), "Read-only file system"), check.IsNil)
 }
 
 func (suite *PouchRunPrivilegedSuite) TestRunCheckSysWritableWithAndWithoutPrivileged(c *check.C) {
@@ -74,14 +65,7 @@ func (suite *PouchRunPrivilegedSuite) TestRunCheckSysWritableWithAndWithoutPrivi
 	res := command.PouchRun("run", "--name", name1, busyboxImage, "sh", "-c", "touch /sys/kernel/profiling")
 	defer DelContainerForceMultyTime(c, name1)
 
-	if res.ExitCode == 0 {
-		c.Errorf("non-privileged container executes touch /sys/kernel/profiling should failed, but succeeded: %v", res.Combined())
-	}
-
-	expected := "Read-only file system"
-	if out := res.Combined(); !strings.Contains(out, expected) {
-		c.Errorf("expected %s, but got %s", expected, out)
-	}
+	c.Assert(util.PartialEqual(res.Combined(), "Read-only file system"), check.IsNil)
 }
 
 // TestCgroupWritableWithAndWithoutPrivileged tests cgroup can be writable with privileged,
@@ -94,10 +78,6 @@ func (suite *PouchRunPrivilegedSuite) TestCgroupWritableWithAndWithoutPrivileged
 	name1 := "TestRunCheckCgroupCannotWritable"
 	res := command.PouchRun("run", "--name", name1, busyboxImage, "sh", "-c", "mkdir /sys/fs/cgroup/cpu/test")
 	defer DelContainerForceMultyTime(c, name1)
-
-	if res.ExitCode == 0 {
-		c.Errorf("non-privileged container executes mkdir /sys/fs/cgroup/cpu/test should failed, but succeeded: %v", res.Combined())
-	}
 
 	c.Assert(util.PartialEqual(res.Combined(), "Read-only file system"), check.IsNil)
 }
