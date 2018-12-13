@@ -59,6 +59,9 @@ type ContainerConfig struct {
 	// An object mapping ports to an empty object in the form:`{<port>/<tcp|udp>: {}}`
 	ExposedPorts map[string]interface{} `json:"ExposedPorts,omitempty"`
 
+	// The upper directory for container.
+	Home string `json:"Home,omitempty"`
+
 	// The hostname to use for the container, as a valid RFC 1123 hostname.
 	// Min Length: 1
 	// Format: hostname

@@ -92,6 +92,9 @@ type container struct {
 	// nvidia container
 	nvidiaVisibleDevices     string
 	nvidiaDriverCapabilities string
+
+	//add home dir
+	homeDir string
 }
 
 func (c *container) config() (*types.ContainerCreateConfig, error) {
@@ -200,6 +203,7 @@ func (c *container) config() (*types.ContainerCreateConfig, error) {
 			SpecAnnotation:      specAnnotation,
 			NetPriority:         c.netPriority,
 			SpecificID:          c.specificID,
+			Home:                c.homeDir,
 		},
 
 		HostConfig: &types.HostConfig{

@@ -381,9 +381,16 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s", config.HostConfig.Runtime)
 	}
 
+	var labels map[string]string
+	if config.Home != "" {
+		labels = make(map[string]string)
+		labels["home"] = config.Home
+	}
+
+	logrus.Infof("pouch labels(%+v)", labels)
 	snapID := id
 	// create a snapshot with image.
-	if err := mgr.Client.CreateSnapshot(ctx, snapID, config.Image); err != nil {
+	if err := mgr.Client.CreateSnapshot(ctx, snapID, config.Image, labels); err != nil {
 		return nil, err
 	}
 	cleanups = append(cleanups, func() error {
