@@ -318,6 +318,10 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		}
 	}
 
+	// NOTE: choose snapshotter, snapshotter can only be set
+	// through containerPlugin in Create function
+	ctx = ctrd.WithSnapshotter(ctx, config.ContainerConfig.Snapshotter)
+
 	// cleanup allocated resources when failed
 	cleanups := []func() error{}
 	defer func() {
@@ -567,6 +571,10 @@ func (mgr *ContainerManager) Start(ctx context.Context, id string, options *type
 			}
 		}
 	}
+
+	// NOTE: choose snapshotter, snapshotter can only be set
+	// through containerPlugin in Create function
+	ctx = ctrd.WithSnapshotter(ctx, c.Config.Snapshotter)
 
 	err = mgr.start(ctx, c, options)
 	if err == nil {
@@ -863,6 +871,10 @@ func (mgr *ContainerManager) Stop(ctx context.Context, name string, timeout int6
 		timeout = c.StopTimeout()
 	}
 
+	// NOTE: choose snapshotter, snapshotter can only be set
+	// through containerPlugin in Create function
+	ctx = ctrd.WithSnapshotter(ctx, c.Config.Snapshotter)
+
 	err = mgr.stop(ctx, c, timeout)
 	if err != nil {
 		return err
@@ -892,6 +904,10 @@ func (mgr *ContainerManager) Restart(ctx context.Context, name string, timeout i
 	if timeout == 0 {
 		timeout = c.StopTimeout()
 	}
+
+	// NOTE: choose snapshotter, snapshotter can only be set
+	// through containerPlugin in Create function
+	ctx = ctrd.WithSnapshotter(ctx, c.Config.Snapshotter)
 
 	if c.IsRunningOrPaused() {
 		// stop container if it is running or paused.
@@ -1170,6 +1186,10 @@ func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *t
 	if err != nil {
 		return err
 	}
+
+	// NOTE: choose snapshotter, snapshotter can only be set
+	// through containerPlugin in Create function
+	ctx = ctrd.WithSnapshotter(ctx, c.Config.Snapshotter)
 
 	if !c.IsStopped() && !c.IsExited() && !c.IsCreated() && !options.Force {
 		return fmt.Errorf("container %s is not stopped, cannot remove it without flag force", c.ID)
