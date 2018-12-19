@@ -69,6 +69,12 @@ var (
 
 	// Subnet default subnet for test
 	Subnet = "192.168.1.0/24"
+
+	// Image7uRepo the repository of 7u2 image
+	Image7uRepo = "reg.docker.alibaba-inc.com/ali/os"
+
+	// Image7uTag the default tag used for 7u2 image
+	Image7uTag = "7u2"
 )
 
 // the following check funtions provide cgroup file avaible check
