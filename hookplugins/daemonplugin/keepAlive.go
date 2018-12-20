@@ -1,8 +1,6 @@
 package daemonplugin
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,6 +14,7 @@ import (
 	"time"
 
 	"github.com/alibaba/pouch/apis/types"
+	"github.com/alibaba/pouch/pkg/system"
 
 	"github.com/sirupsen/logrus"
 )
@@ -125,7 +124,7 @@ func activePluginsOnce() {
 			plugin := fmt.Sprintf("/opt/ali-iaas/pouch/plugins/%s", one)
 			activeOne := osexec.Cmd{
 				Path:   plugin,
-				Args:   []string{plugin, getNodeIP()},
+				Args:   []string{plugin, system.GetNodeIP()},
 				Stdout: f,
 				Stderr: f,
 			}
@@ -154,17 +153,4 @@ func activePluginsOnce() {
 			f.Close()
 		}
 	}
-}
-
-func getNodeIP() string {
-	if b, e := osexec.Command("hostname", "-i").CombinedOutput(); e == nil {
-		scanner := bufio.NewScanner(bytes.NewReader(b))
-		for scanner.Scan() {
-			ip := scanner.Text()
-			if net.ParseIP(ip) != nil {
-				return ip
-			}
-		}
-	}
-	return ""
 }
