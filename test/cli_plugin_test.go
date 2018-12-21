@@ -316,3 +316,42 @@ func (suite *PouchRunSuite) TestNetPriority(c *check.C) {
 	}
 
 }
+
+// TestDropCap: hook plugin will add more caps in create, test
+// drop-cap include these caps also take effect
+func (suite *PouchRunSuite) TestDropCap(c *check.C) {
+	name1 := "TestWithDefaultCap"
+	name2 := "TestDropCap"
+
+	// test default has NET_ADMIN capability
+	command.PouchRun("run", "-d", "--name", name1, busyboxImage, "top").Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, name1)
+	command.PouchRun("exec", name1, "brctl", "addbr", "foo").Assert(c, icmd.Success)
+
+	// test extra added caps for rich container can be drop
+	command.PouchRun("run", "-d", "--cap-drop", "NET_ADMIN", "--name", name2, busyboxImage, "top").Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, name2)
+
+	expt := icmd.Expected{
+		ExitCode: 1,
+		Err:      "Operation not permitted",
+	}
+	err := command.PouchRun("exec", name2, "brctl", "addbr", "foo").Compare(expt)
+	c.Assert(err, check.IsNil)
+
+	defaultAddedCaps := [6]string{"SYS_RESOURCE", "SYS_MODULE", "SYS_PTRACE", "SYS_PACCT", "NET_ADMIN", "SYS_ADMIN"}
+	output := command.PouchRun("inspect", "-f", "{{.HostConfig.CapAdd}}", name2).Stdout()
+
+	for _, value := range defaultAddedCaps {
+		if value == "NET_ADMIN" {
+			if strings.Contains(output, value) {
+				c.Errorf("NET_ADMIN should be droped")
+			}
+			continue
+		}
+
+		if !strings.Contains(output, value) {
+			c.Errorf("%s should contains %s", output, value)
+		}
+	}
+}
