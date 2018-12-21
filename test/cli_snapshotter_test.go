@@ -23,6 +23,9 @@ func init() {
 // SetUpSuite does common setup in the beginning of each test suite.
 func (suite *PouchSnapshotterSuite) SetUpSuite(c *check.C) {
 	SkipIfFalse(c, environment.IsLinux)
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	environment.PruneAllContainers(apiClient)
 }
 
