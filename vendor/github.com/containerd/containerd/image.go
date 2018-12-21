@@ -10,7 +10,6 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/rootfs"
 	"github.com/containerd/containerd/snapshots"
-
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/identity"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -101,14 +100,14 @@ func (i *image) Unpack(ctx context.Context, snapshotterName string) error {
 	}
 
 	opts := []snapshots.Opt{
-		snapshots.WithLabels(map[string]string{"type":"image"}),
+		snapshots.WithLabels(map[string]string{"type": "image"}),
 		snapshots.WithLabels(i.i.Labels),
 	}
 
 	var (
-		sn  = i.client.SnapshotService(snapshotterName)
-		a   = i.client.DiffService()
-		cs  = i.client.ContentStore()
+		sn = i.client.SnapshotService(snapshotterName)
+		a  = i.client.DiffService()
+		cs = i.client.ContentStore()
 
 		chain    []digest.Digest
 		unpacked bool
@@ -136,23 +135,21 @@ func (i *image) Unpack(ctx context.Context, snapshotterName string) error {
 		chain = append(chain, layer.Diff.Digest)
 	}
 
-	if unpacked {
-		desc, err := i.i.Config(ctx, cs, platforms.Default())
-		if err != nil {
-			return err
-		}
+	desc, err := i.i.Config(ctx, cs, platforms.Default())
+	if err != nil {
+		return err
+	}
 
-		rootfs := identity.ChainID(chain).String()
+	rootfs := identity.ChainID(chain).String()
 
-		cinfo := content.Info{
-			Digest: desc.Digest,
-			Labels: map[string]string{
-				fmt.Sprintf("containerd.io/gc.ref.snapshot.%s", snapshotterName): rootfs,
-			},
-		}
-		if _, err := cs.Update(ctx, cinfo, fmt.Sprintf("labels.containerd.io/gc.ref.snapshot.%s", snapshotterName)); err != nil {
-			return err
-		}
+	cinfo := content.Info{
+		Digest: desc.Digest,
+		Labels: map[string]string{
+			fmt.Sprintf("containerd.io/gc.ref.snapshot.%s", snapshotterName): rootfs,
+		},
+	}
+	if _, err := cs.Update(ctx, cinfo, fmt.Sprintf("labels.containerd.io/gc.ref.snapshot.%s", snapshotterName)); err != nil {
+		return err
 	}
 
 	return nil
