@@ -13,6 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var extendCapabilities = []string{
+	"SYS_RESOURCE",
+	"SYS_MODULE",
+	"SYS_PTRACE",
+	"SYS_PACCT",
+	"NET_ADMIN",
+	"SYS_ADMIN",
+}
+
 type contPlugin struct{}
 
 func init() {
@@ -132,8 +141,14 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		}
 	}
 
-	createConfig.HostConfig.CapAdd = append(createConfig.HostConfig.CapAdd, "SYS_RESOURCE", "SYS_MODULE",
-		"SYS_PTRACE", "SYS_PACCT", "NET_ADMIN", "SYS_ADMIN")
+	// add extend capabilities for common_vm mode container
+	extendCaps := make([]string, 0, len(extendCapabilities))
+	for _, cap := range extendCapabilities {
+		if !inSlice(createConfig.HostConfig.CapDrop, cap) {
+			extendCaps = append(extendCaps, cap)
+		}
+	}
+	createConfig.HostConfig.CapAdd = append(createConfig.HostConfig.CapAdd, extendCaps...)
 
 	createConfig.HostConfig.CapAdd = UniqueStringSlice(createConfig.HostConfig.CapAdd)
 
@@ -225,4 +240,13 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	}
 
 	return nil
+}
+
+func inSlice(slice []string, s string) bool {
+	for _, ss := range slice {
+		if strings.ToLower(s) == strings.ToLower(ss) {
+			return true
+		}
+	}
+	return false
 }
