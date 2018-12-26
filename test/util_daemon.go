@@ -45,6 +45,9 @@ func GetRootDir() (string, error) {
 
 // StartDefaultDaemonDebug starts a deamon with default configuration and debug on.
 func StartDefaultDaemonDebug(args ...string) (*daemon.Config, error) {
+	// clean test home dir
+	os.RemoveAll(daemon.HomeDir)
+
 	cfg := daemon.NewConfig()
 	cfg.Debug = true
 
