@@ -355,3 +355,18 @@ func (suite *PouchRunSuite) TestDropCap(c *check.C) {
 		}
 	}
 }
+
+// TestPouchLabelConvert: Add label pouch.SupportCgroup=true to container. PreCreate hook
+// will convert it to env pouchSupportCgroup=true
+func (suite *PouchRunSuite) TestPouchLabelConvert(c *check.C) {
+	name := "TestLabelPouchSupportCgroup"
+	res := command.PouchRun("run", "-d", "--label", "pouch.SupportCgroup=true", "--name", name, Image7u)
+	defer DelContainerForceMultyTime(c, name)
+	res.Assert(c, icmd.Success)
+
+	expectedstring := "pouchSupportCgroup=true"
+	output := command.PouchRun("inspect", "-f", "{{.Config.Env}}", name).Stdout()
+	if !strings.Contains(output, expectedstring) {
+		c.Errorf("%s should contains %s", output, expectedstring)
+	}
+}

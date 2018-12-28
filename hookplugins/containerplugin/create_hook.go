@@ -44,6 +44,8 @@ func init() {
 // 12. set HOSTNAME env if HostName specified
 // 13. if VolumesFrom specified and the container name has a prefix of slash, trim it
 // 14. add net-priority into spec-annotations
+// 15. add annotations with prefix 'annotation.' into spec-annotations, for edas serverless
+// 16. convert label pouch.SupportCgroup to env pouchSupportCgroup. Runc will clear cgroup readonly with this env
 func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error {
 	logrus.Infof("pre create method called")
 
@@ -237,6 +239,12 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		if strings.HasPrefix(k, "annotation.") {
 			createConfig.SpecAnnotation[strings.TrimPrefix(k, "annotation.")] = v
 		}
+	}
+
+	// convert label pouch.SupportCgroup to env pouchSupportCgroup. Runc will clear cgroup readonly with this env
+	supportCgroup := createConfig.Labels["pouch.SupportCgroup"]
+	if supportCgroup == "true" {
+		createConfig.Env = append(createConfig.Env, "pouchSupportCgroup=true")
 	}
 
 	return nil
