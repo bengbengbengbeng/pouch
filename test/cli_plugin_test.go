@@ -7,6 +7,7 @@ import (
 
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
+	"github.com/alibaba/pouch/test/util"
 
 	"github.com/go-check/check"
 	"github.com/gotestyourself/gotestyourself/icmd"
@@ -252,6 +253,10 @@ func (suite *PouchRunSuite) TestShmSizeIsHalfOfMemory(c *check.C) {
 	res.Assert(c, icmd.Success)
 	output := command.PouchRun("inspect", "-f", "{{.HostConfig.ShmSize}}", name).Stdout()
 	c.Assert(strings.TrimSpace(output), check.Equals, "4294967296") // 4294967296=8x1024x1024x1024/2
+
+	res = command.PouchRun("exec", name, "df", "-k", "/dev/shm")
+	res.Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "4194304"), check.IsNil)
 }
 
 // TestSetHostnameEnv: set HOSTNAME env if HostName specified
