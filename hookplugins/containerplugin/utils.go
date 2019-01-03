@@ -92,7 +92,7 @@ func prepareNetwork(requestedIP, defaultRoute, mask, nic string, networkMode str
 	} else {
 		nwName = nwName + "_" + defaultRoute
 	}
-	if getEnv(rawEnv, "OverlayNetwork") == "true" {
+	if getEnv(rawEnv, "OverlayNetwork") == optionOn {
 		nwName = nwName + ".overlay"
 	}
 	logrus.Infof("create container network params %s %s %s %s %s", requestedIP, defaultRoute, mask, nic, networkMode)

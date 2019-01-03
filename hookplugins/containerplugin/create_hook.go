@@ -10,6 +10,7 @@ import (
 	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/hookplugins"
 
+	"github.com/docker/docker/daemon/caps"
 	"github.com/sirupsen/logrus"
 )
 
@@ -143,14 +144,23 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		}
 	}
 
-	// add extend capabilities for common_vm mode container
-	extendCaps := make([]string, 0, len(extendCapabilities))
-	for _, cap := range extendCapabilities {
-		if !inSlice(createConfig.HostConfig.CapDrop, cap) {
-			extendCaps = append(extendCaps, cap)
+	// -e ali_jvm_cgroup=true allow container get all capabilities
+	if getEnv(env, "ali_jvm_cgroup") == optionOn {
+		allCaps := caps.GetAllCapabilities()
+		createConfig.HostConfig.CapAdd = make([]string, 0, 64)
+		for _, v := range allCaps {
+			createConfig.HostConfig.CapAdd = append(createConfig.HostConfig.CapAdd, strings.TrimPrefix(v, "CAP_"))
 		}
+	} else {
+		// add extend capabilities for common_vm mode container
+		extendCaps := make([]string, 0, len(extendCapabilities))
+		for _, cap := range extendCapabilities {
+			if !inSlice(createConfig.HostConfig.CapDrop, cap) {
+				extendCaps = append(extendCaps, cap)
+			}
+		}
+		createConfig.HostConfig.CapAdd = append(createConfig.HostConfig.CapAdd, extendCaps...)
 	}
-	createConfig.HostConfig.CapAdd = append(createConfig.HostConfig.CapAdd, extendCaps...)
 
 	createConfig.HostConfig.CapAdd = UniqueStringSlice(createConfig.HostConfig.CapAdd)
 
@@ -243,7 +253,7 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 
 	// convert label pouch.SupportCgroup to env pouchSupportCgroup. Runc will clear cgroup readonly with this env
 	supportCgroup := createConfig.Labels["pouch.SupportCgroup"]
-	if supportCgroup == "true" {
+	if supportCgroup == optionOn {
 		createConfig.Env = append(createConfig.Env, "pouchSupportCgroup=true")
 	}
 
