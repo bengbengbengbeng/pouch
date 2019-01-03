@@ -131,6 +131,15 @@ ali_call_scm
 
 #### 11. 将label中设置的annotation.的前缀字段设置到SpecAnnotation中
 
+#### 12. 容器cgroup rw属性的设置
+
+如果label中含有pouch.SupportCgroup=true，那么转换成env: pouchSupportCgroup=true
+runc中会解析pouchSupportCgroup=true， 将容器cgroup的readonly mount option去掉，最终达到
+容器中对cgroup可写的需求。
+该label的使用方式为了兼容alidocker上的使用，兼容后，sigma可以直接通过设置label的方式同时
+支持alidocker和pouch。alidocker上该功能的代码提交如下：
+http://gitlab.alibaba-inc.com/docker/docker/commit/87bda17027515c0cf60993f9c7d454ecf2ec84cd
+
 ### 容器启动插件点：PreStart
 
 设置runc中prestart hook要执行的工具：
