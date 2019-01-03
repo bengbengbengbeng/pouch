@@ -138,7 +138,7 @@ runc中会解析pouchSupportCgroup=true， 将容器cgroup的readonly mount opti
 容器中对cgroup可写的需求。
 该label的使用方式为了兼容alidocker上的使用，兼容后，sigma可以直接通过设置label的方式同时
 支持alidocker和pouch。alidocker上该功能的代码提交如下：
-http://gitlab.alibaba-inc.com/docker/docker/commit/87bda17027515c0cf60993f9c7d454ecf2ec84cd
+[label alipay.SupportCgroup=true](http://gitlab.alibaba-inc.com/docker/docker/commit/87bda17027515c0cf60993f9c7d454ecf2ec84cd)
 
 ### 容器启动插件点：PreStart
 

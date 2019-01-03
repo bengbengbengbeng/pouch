@@ -9,6 +9,7 @@ import (
 	"github.com/alibaba/pouch/test/environment"
 	"github.com/alibaba/pouch/test/util"
 
+	"github.com/docker/docker/daemon/caps"
 	"github.com/go-check/check"
 	"github.com/gotestyourself/gotestyourself/icmd"
 )
@@ -374,4 +375,25 @@ func (suite *PouchRunSuite) TestPouchLabelConvert(c *check.C) {
 	if !strings.Contains(output, expectedstring) {
 		c.Errorf("%s should contains %s", output, expectedstring)
 	}
+}
+
+// TestEnvAliJvmCgroup: -e ali_jvm_cgroup=true allow container get all capabilities and make cgroup writeable
+func (suite *PouchRunSuite) TestEnvAliJvmCgroup(c *check.C) {
+	name := "TestEnvAliJvmCgroup"
+	res := command.PouchRun("run", "-d", "-e", "ali_jvm_cgroup=true", "--name", name, busyboxImage, "top")
+	defer DelContainerForceMultyTime(c, name)
+	res.Assert(c, icmd.Success)
+
+	res = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name)
+	c.Assert(util.PartialEqual(res.Stdout(), "ali_jvm_cgroup"), check.IsNil)
+
+	out := command.PouchRun("inspect", "-f", "{{.HostConfig.CapAdd}}", name).Stdout()
+	allCaps := caps.GetAllCapabilities()
+	for _, v := range allCaps {
+		c.Assert(util.PartialEqual(out, strings.TrimPrefix(v, "CAP_")), check.IsNil)
+	}
+
+	// test cgroup writeable
+	res = command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/cpu/test")
+	res.Assert(c, icmd.Success)
 }
