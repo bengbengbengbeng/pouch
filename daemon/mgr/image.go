@@ -165,6 +165,9 @@ func (mgr *ImageManager) PullImage(ctx context.Context, ref string, authConfig *
 		return err
 	}
 
+	// before image unpack, call WithImageUnpack
+	ctx = ctrd.WithImageUnpack(ctx)
+
 	// unpack image
 	if err = img.Unpack(ctx, ctrd.CurrentSnapshotterName(ctx)); err != nil {
 		writeStream(err)
