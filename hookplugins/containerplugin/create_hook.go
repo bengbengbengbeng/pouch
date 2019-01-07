@@ -11,6 +11,7 @@ import (
 	"github.com/alibaba/pouch/hookplugins"
 
 	"github.com/docker/docker/daemon/caps"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -255,6 +256,53 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	supportCgroup := createConfig.Labels["pouch.SupportCgroup"]
 	if supportCgroup == optionOn {
 		createConfig.Env = append(createConfig.Env, "pouchSupportCgroup=true")
+	}
+
+	if err := validateSpecAnnotation(createConfig); err != nil {
+		return errors.Wrap(err, "failed to validate spec annotation")
+	}
+
+	return nil
+}
+
+func validateSpecAnnotation(createConfig *types.ContainerCreateConfig) error {
+	specAnnotation := createConfig.SpecAnnotation
+	for key := range specAnnotation {
+		if !strings.HasPrefix(key, hookplugins.AnnotationPrefix) {
+			continue
+		}
+
+		if _, exist := hookplugins.SupportAnnotation[key]; !exist {
+			return errors.Errorf("failed to validate spec annotation, invalid key(%s)", key)
+		}
+	}
+
+	if err := validateCpusetTrick(specAnnotation, createConfig.HostConfig.CpusetCpus); err != nil {
+		return errors.Wrap(err, "failed to validate cpuset trick")
+	}
+
+	return nil
+}
+
+func validateCpusetTrick(specAnnotation map[string]string, cpusetCpus string) error {
+	cpusetTrickCpus := specAnnotation[hookplugins.SpecCpusetTrickCpus]
+	cpusetTrickTasks := specAnnotation[hookplugins.SpecCpusetTrickTasks]
+	cpusetTrickExemptTasks := specAnnotation[hookplugins.SpecCpusetTrickExemptTasks]
+
+	if cpusetTrickCpus != "" && cpusetCpus == "" {
+		return errors.Errorf("conflict cpuset.trick_cpus is %s with cpuset.cpus is nil",
+			cpusetTrickCpus)
+	}
+
+	if cpusetTrickCpus != "" && (cpusetTrickTasks == "" && cpusetTrickExemptTasks == "") {
+		return errors.Errorf("conflict cpuset.trick_cpus is %s with"+
+			" CpusetTrickTasks and CpusetTrickexemptTasks are nil", cpusetTrickCpus)
+	}
+
+	if cpusetTrickCpus == "" && (cpusetTrickTasks != "" || cpusetTrickExemptTasks != "") {
+		return errors.Errorf("conflict cpuset.trick_cpus is nil, "+
+			"but CpusetTrickTasks is %s or CpusetTrickexemptTasks is %s",
+			cpusetTrickTasks, cpusetTrickExemptTasks)
 	}
 
 	return nil
