@@ -119,7 +119,7 @@ func (suite *PouchRunSuite) TestUidFromIp(c *check.C) {
 	name := "TestUidFromIp"
 	endingnumber := 13 // uid=500+13=513
 	FakeIP := "192.168.5." + strconv.Itoa(endingnumber)
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=vm", "-e", "RequestedIP="+FakeIP, "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=vm", "-e", "RequestedIP="+FakeIP, "--env", "ali_admin_uid=0", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -137,7 +137,7 @@ func (suite *PouchRunSuite) TestUidFromIp(c *check.C) {
 //TestSetUserToRootInRichContainer: set user to root if running in rich container mode
 func (suite *PouchRunSuite) TestSetUserToRootInRichContainer(c *check.C) {
 	name := "TestSetUserToRootInRichContainer"
-	res := command.PouchRun("run", "-d", "-u", "admin", "--env", "ali_run_mode=vm", "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "-u", "admin", "--env", "ali_run_mode=vm", "--env", "ali_admin_uid=0", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -165,7 +165,7 @@ func (suite *PouchRunSuite) TestSetUserToRootInRichContainer(c *check.C) {
 // TestConvertDiskQuotaLabel: convert label DiskQuota to DiskQuota in ContainerConfig parameter
 func (suite *PouchRunSuite) TestConvertDiskQuotaLabel(c *check.C) {
 	name := "TestConvertDiskQuotaLabel"
-	res := command.PouchRun("run", "-d", "-l", "DiskQuota=\"/=1G\"", "--env", "ali_run_mode=vm", "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "-l", "DiskQuota=\"/=1G\"", "--env", "ali_run_mode=vm", "--env", "ali_admin_uid=0", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -179,7 +179,7 @@ func (suite *PouchRunSuite) TestConvertDiskQuotaLabel(c *check.C) {
 //TestAliRunModeWithCommonVm: in rich container mode, change ali_run_mode=common_vm to ali_run_mode=vm
 func (suite *PouchRunSuite) TestAliRunModeWithCommonVm(c *check.C) {
 	name := "TestAliRunModeWithCommonVm"
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -193,7 +193,7 @@ func (suite *PouchRunSuite) TestAliRunModeWithCommonVm(c *check.C) {
 //TestLabelsToEnv: in rich container mode, change ali_run_mode=common_vm to ali_run_mode=vm
 func (suite *PouchRunSuite) TestLabelsToEnv(c *check.C) {
 	name := "TestLabelsToEnv"
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--env", "RequestedIP=192.168.5.11", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--env", "RequestedIP=192.168.5.11", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -219,7 +219,7 @@ func (suite *PouchRunSuite) TestLabelsToEnv(c *check.C) {
 // SYS_RESOURCE SYS_MODULE SYS_PTRACE SYS_PACCT NET_ADMIN SYS_ADMIN are added.
 func (suite *PouchRunSuite) TestCapabilitiesInRichContainer(c *check.C) {
 	name := "TestCapabilitiesInRichContainer"
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -236,7 +236,7 @@ func (suite *PouchRunSuite) TestCapabilitiesInRichContainer(c *check.C) {
 // TestBindHostsHostnameResolvInRichContainer: in rich container mode, bind /etc/hosts /etc/hostname /etc/resolv.conf files into container
 func (suite *PouchRunSuite) TestBindHostsHostnameResolvInRichContainer(c *check.C) {
 	name := "TestBindHostsHostnameResolvInRichContainer"
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "-v", "/etc/:/tmp/etc/", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "ali_admin_uid=0", "-v", "/etc/:/tmp/etc/", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -249,7 +249,7 @@ func (suite *PouchRunSuite) TestBindHostsHostnameResolvInRichContainer(c *check.
 // TestShmSizeIsHalfOfMemory: in rich container mode, set ShmSize to half of the limit of memory
 func (suite *PouchRunSuite) TestShmSizeIsHalfOfMemory(c *check.C) {
 	name := "TestShmSizeIsHalfOfMemory"
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--memory=8G", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--memory=8G", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 	output := command.PouchRun("inspect", "-f", "{{.HostConfig.ShmSize}}", name).Stdout()
@@ -264,7 +264,7 @@ func (suite *PouchRunSuite) TestShmSizeIsHalfOfMemory(c *check.C) {
 func (suite *PouchRunSuite) TestSetHostnameEnv(c *check.C) {
 	name := "TestSetHostnameEnv"
 
-	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "HOSTNAME=myhello", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--env", "ali_run_mode=common_vm", "--env", "HOSTNAME=myhello", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -288,14 +288,14 @@ func (suite *PouchRunSuite) TestTrimPrefixContainerSlash(c *check.C) {
 	defer command.PouchRun("volume", "remove", vol1)
 	defer command.PouchRun("volume", "remove", vol2)
 
-	con1id := command.PouchRun("run", "-d", "-v", vol1+":/v1", "-v", vol2+":/v2", "--name", con1name, Image7u).Stdout()
+	con1id := command.PouchRun("run", "-d", "-v", vol1+":/v1", "-v", vol2+":/v2", "--name", con1name, alios7u).Stdout()
 	defer DelContainerForceMultyTime(c, con1name)
 
 	cmd := "echo hellopouch > /v1/tmpfile"
 	command.PouchRun("exec", con1name, "bash", "-c", cmd).Assert(c, icmd.Success)
 	command.PouchRun("stop", con1name).Assert(c, icmd.Success)
 
-	command.PouchRun("run", "-d", "--volumes-from", "/"+con1id, "--name", con2name, Image7u).Assert(c, icmd.Success)
+	command.PouchRun("run", "-d", "--volumes-from", "/"+con1id, "--name", con2name, alios7u).Assert(c, icmd.Success)
 	defer DelContainerForceMultyTime(c, con2name)
 	cmd = "cat /v1/tmpfile"
 	//time.Sleep(20 * time.Second)
@@ -311,7 +311,7 @@ func (suite *PouchRunSuite) TestTrimPrefixContainerSlash(c *check.C) {
 func (suite *PouchRunSuite) TestNetPriority(c *check.C) {
 	name := "TestNetPriority"
 
-	res := command.PouchRun("run", "-d", "--net-priority=7", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--net-priority=7", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -366,7 +366,7 @@ func (suite *PouchRunSuite) TestDropCap(c *check.C) {
 // will convert it to env pouchSupportCgroup=true
 func (suite *PouchRunSuite) TestPouchLabelConvert(c *check.C) {
 	name := "TestLabelPouchSupportCgroup"
-	res := command.PouchRun("run", "-d", "--label", "pouch.SupportCgroup=true", "--name", name, Image7u)
+	res := command.PouchRun("run", "-d", "--label", "pouch.SupportCgroup=true", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
