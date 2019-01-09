@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/alibaba/pouch/apis/types"
+	"github.com/alibaba/pouch/pkg/kernel"
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
 	"github.com/alibaba/pouch/test/request"
@@ -35,6 +36,12 @@ func (suite *APIContainerStatsSuite) TestNoSuchContainer(c *check.C) {
 
 // TestNoStream tests stats api without stream
 func (suite *APIContainerStatsSuite) TestNoStream(c *check.C) {
+	// skip test when kernel version less then 4.0
+	version, _ := kernel.GetKernelVersion()
+	if version.Kernel < 4 {
+		c.Skip("skip TestNoStream test when kernel version less then 4.0")
+	}
+
 	name := "test_no_stream"
 	command.PouchRun("run", "-d", "--name", name, busyboxImage, "sh", "-c", "while true; do sleep 1; done").Assert(c, icmd.Success)
 	defer DelContainerForceMultyTime(c, name)
