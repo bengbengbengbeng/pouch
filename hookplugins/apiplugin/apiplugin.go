@@ -47,6 +47,8 @@ func updateHandlerSpec(spec *types.HandlerSpec) (removed bool) {
 	switch spec.Path {
 	case "/version":
 		spec.HandlerFunc = getVersionHandler(spec.HandlerFunc)
+	case "/containers/create":
+		spec.HandlerFunc = containerCreateWrapper(spec.HandlerFunc)
 	}
 
 	return false

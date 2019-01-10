@@ -206,3 +206,70 @@ version返回 `1.12.6`
 兼容swarm的做法。
 
 请求来的时候，将容器名前面的`/`去掉；返回时，在容器名前添加`/`
+
+#### alikernel额外resouce设置方法
+
+为了兼容alidocker中在HostConfig.Resource中增加的所有针对alios配置的参数，因为pouch不能通过修改api创建参数,
+为了兼容上层swarm通过SDK的方式请求container api的调用方式，request body带有的参数需要用alidocker的数据结构
+通过json反序列化将需要的额外的配置提取出来，通过定义的键值，将信息同步设置到SpecAnnotation中，支持的键值定义如下:
+
+```go
+SpecCpusetTrickCpus           = "customization.cpuset_trick_cpus"
+SpecCpusetTrickTasks          = "customization.cpuset_trick_tasks"
+SpecCpusetTrickExemptTasks    = "customization.cpuset_trick_exempt_tasks"
+SpecCpuBvtWarpNs              = "customization.cpu_bvt_warp_ns"
+SpecCpuacctSchedLatSwitch     = "customization.cpuacct_sched_lat_switch"
+SpecMemoryWmarkRatio          = "customization.memory_wmark_ratio"
+SpecMemoryExtra               = "customization.memory_extra"
+SpecMemoryForceEmptyCtl       = "customization.memory_force_empty_ctl"
+SpecMemoryPriority            = "customization.memory_priority"
+SpecMemoryUsePriorityOOM      = "customization.memory_use_priority_oom"
+SpecMemoryOOMKillAll          = "customization.memory_oom_kill_all"
+SpecMemoryDroppable           = "customization.memory_droppable"
+SpecIntelRdtL3Cbm             = "customization.intel_rdt_l3_cbm"
+SpecIntelRdtGroup             = "customization.intel_rdt_group"
+SpecIntelRdtMba               = "customization.intel_rdt_mba"
+SpecBlkioFileLevelSwitch      = "customization.blkio_file_level_switch"
+SpecBlkioBufferWriteBps       = "customization.blkio_buffer_write_bps"
+SpecBlkioMetaWriteTps         = "customization.blkio_meta_write_tps"
+SpecBlkioFileThrottlePath     = "customization.blkio_file_throttle_path"
+SpecBlkioBufferWriteSwitch    = "customization.blkio_buffer_write_switch"
+SpecBlkioDeviceBufferWriteBps = "customization.blkio_device_buffer_write_bps"
+SpecBlkioDeviceIdleTime       = "customization.blkio_device_idle_time"
+SpecBlkioDeviceLatencyTarget  = "customization.blkio_device_latency_target"
+SpecBlkioDeviceReadLowBps     = "customization.blkio_device_read_low_bps"
+SpecBlkioDeviceReadLowIOps    = "customization.blkio_device_read_low_iops"
+SpecBlkioDeviceWriteLowBps    = "customization.blkio_device_write_low_bps"
+SpecBlkioDeviceWriteLowIOps   = "customization.blkio_device_write_low_iops"
+SpecNetCgroupRate             = "customization.net_cgroup_rate"
+SpecNetCgroupCeil             = "customization.net_cgroup_ceil"
+```
+
+但是原先在alidocker中有些是结构体的方式传递的参数，转化到`map[string][string]`需要将`struct`按照固定的规则转换成`string`
+
+1. 结构`[]string`转换规则
+
+将数据每个元素按照`空格`分隔符连接成`string`，使用参数`BlkFileThrottlePath`，使用函数
+
+```
+strings.Join(resourceWrapper.BlkFileThrottlePath, " ")
+```
+
+2. 结构`[]*types.ThrottleDevice`转换规则
+
+结构体`ThrottleDevice`如下：
+
+```go
+type ThrottleDevice struct {
+
+	// Device path
+	Path string `json:"Path,omitempty"`
+
+	// Rate
+	// Minimum: 0
+	Rate uint64 `json:"Rate,omitempty"`
+}
+```
+
+通过`冒号`将`Path`和`Rate`进行连接，使用函数`fmt.Sprintf("%s:%d", t.Path, t.Rate)`，
+用`空格`在将slice进行连接
