@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alibaba/pouch/daemon/mgr"
 	networktypes "github.com/alibaba/pouch/network/types"
 
 	"github.com/sirupsen/logrus"
@@ -13,12 +14,31 @@ import (
 // PreStart returns an array of priority and args which will pass to runc, the every priority
 // used to sort the pre start array that pass to runc, network plugin hook always has priority value 0.
 // Prestart copy files to container rootfs
-func (c *contPlugin) PreStart(interface{}) ([]int, [][]string, error) {
+func (c *contPlugin) PreStart(config interface{}) ([]int, [][]string, error) {
+	var (
+		retPriority  = []int{-100}
+		retHookPaths = [][]string{{"/opt/ali-iaas/pouch/bin/prestart_hook"}}
+	)
+
 	logrus.Infof("pre start method called")
 
-	// invoke script at /opt/ali-iaas/pouch/bin/start_hook.sh
-	// copy file into the ns, put entrypoint in container. like the function of pouch_container_create.sh in old version
-	return []int{-100}, [][]string{{"/opt/ali-iaas/pouch/bin/prestart_hook"}}, nil
+	container, ok := config.(*mgr.Container)
+	if !ok {
+		// invoke script at /opt/ali-iaas/pouch/bin/start_hook.sh
+		// copy file into the ns, put entrypoint in container. like the function of pouch_container_create.sh in old version
+		return retPriority, retHookPaths, nil
+	}
+
+	// if copyPodHosts is set, update config and add prestart hook
+	if isCopyPodHostsOn(container.Config, container.HostConfig) {
+		pri, prestartArgs := updateContainerForPodHosts(container)
+		if len(prestartArgs) > 0 {
+			retPriority = append(retPriority, pri)
+			retHookPaths = append(retHookPaths, prestartArgs)
+		}
+	}
+
+	return retPriority, retHookPaths, nil
 }
 
 // PreCreateEndpoint accepts the container id and env of this container, to update the config of container's endpoint.
