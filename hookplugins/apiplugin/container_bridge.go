@@ -176,6 +176,12 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(configWrapper); err != nil {
 			return httputils.NewHTTPError(err, http.StatusBadRequest)
 		}
+
+		if configWrapper.HostConfig == nil {
+			req.Body = ioutil.NopCloser(bytes.NewBuffer(buffer))
+			return h(ctx, rw, req)
+		}
+
 		// decode container config by pouch struct
 		config := &types.ContainerCreateConfig{}
 		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(config); err != nil {
