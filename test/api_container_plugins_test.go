@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io/ioutil"
+	"net/url"
 	"os"
 
 	"github.com/alibaba/pouch/apis/types"
@@ -28,6 +29,11 @@ func (suite *APIContainerPluginsSuite) SetUpTest(c *check.C) {
 
 // TestCpusetTrick tests creating container cpuset trick.
 func (suite *APIContainerPluginsSuite) TestCpusetTrick(c *check.C) {
+	q := url.Values{
+		"name": []string{"TestCpusetTrick"},
+	}
+	query := request.WithQuery(q)
+
 	obj := map[string]interface{}{
 		"Cmd":   []string{"top"},
 		"Image": busyboxImage,
@@ -40,7 +46,7 @@ func (suite *APIContainerPluginsSuite) TestCpusetTrick(c *check.C) {
 	}
 
 	body := request.WithJSONBody(obj)
-	resp, err := request.Post("/containers/create", body)
+	resp, err := request.Post("/containers/create", query, body)
 	c.Assert(err, check.IsNil)
 	CheckRespStatus(c, resp, 201)
 
