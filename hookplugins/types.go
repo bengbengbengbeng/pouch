@@ -17,8 +17,8 @@ var (
 
 	// SpecMemoryWmarkRatio defines customization.memory_wmark_ratio
 	SpecMemoryWmarkRatio = AnnotationPrefix + "memory_wmark_ratio"
-	// SpecMemoryExtra defines customization.memory_extra
-	SpecMemoryExtra = AnnotationPrefix + "memory_extra"
+	// SpecMemoryExtraInBytes defines customization.memory_extra_in_bytes
+	SpecMemoryExtraInBytes = AnnotationPrefix + "memory_extra_in_bytes"
 	// SpecMemoryForceEmptyCtl defines customization.memory_force_empty_ctl
 	SpecMemoryForceEmptyCtl = AnnotationPrefix + "memory_force_empty_ctl"
 	// SpecMemoryPriority defines customization.memory_priority
@@ -76,7 +76,7 @@ var SupportAnnotation = map[string]struct{}{
 	SpecCPUBvtWarpNs:              {},
 	SpecCpuacctSchedLatSwitch:     {},
 	SpecMemoryWmarkRatio:          {},
-	SpecMemoryExtra:               {},
+	SpecMemoryExtraInBytes:        {},
 	SpecMemoryForceEmptyCtl:       {},
 	SpecMemoryPriority:            {},
 	SpecMemoryUsePriorityOOM:      {},

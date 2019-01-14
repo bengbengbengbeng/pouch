@@ -217,7 +217,7 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 			specAnnotation[hp.SpecMemoryWmarkRatio] = strconv.Itoa(resourceWrapper.MemoryWmarkRatio)
 		}
 		if resourceWrapper.MemoryExtra != 0 {
-			specAnnotation[hp.SpecMemoryExtra] = strconv.FormatInt(resourceWrapper.MemoryExtra, 10)
+			specAnnotation[hp.SpecMemoryExtraInBytes] = strconv.FormatInt(resourceWrapper.MemoryExtra, 10)
 		}
 		if resourceWrapper.MemoryForceEmptyCtl != 0 {
 			specAnnotation[hp.SpecMemoryForceEmptyCtl] = strconv.Itoa(resourceWrapper.MemoryForceEmptyCtl)
