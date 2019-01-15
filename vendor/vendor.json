@@ -1453,12 +1453,6 @@
 			"revisionTime": "2017-05-10T13:15:34Z"
 		},
 		{
-			"checksumSHA1": "jHOLsfeMPcX84YQB2MXBqXFntBg=",
-			"path": "github.com/kr/pty",
-			"revision": "95d05c1eef33a45bd58676b6ce28d105839b8d0b",
-			"revisionTime": "2017-10-06T17:48:01Z"
-		},
-		{
 			"checksumSHA1": "AYZGozgchqe4WcKH/jCZI1flnP8=",
 			"path": "github.com/magiconair/properties",
 			"revision": "c2353362d570a7bfa228149c62842019201cfb71",
