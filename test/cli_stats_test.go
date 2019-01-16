@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alibaba/pouch/pkg/kernel"
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
 
@@ -21,6 +22,12 @@ func init() {
 // SetUpSuite does common setup in the beginning of each test suite.
 func (s *PouchStatsSuite) SetUpSuite(c *check.C) {
 	SkipIfFalse(c, environment.IsLinux)
+
+	// skip test when alikernel version less then 4.0
+	version, _ := kernel.GetKernelVersion()
+	if version.Kernel < 4 {
+		c.Skip("skip TestNoStream test when kernel version less then 4.0")
+	}
 
 	environment.PruneAllContainers(apiClient)
 
