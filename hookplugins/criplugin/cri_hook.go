@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/alibaba/pouch/apis/types"
-	critype "github.com/alibaba/pouch/cri/v1alpha2"
+	critype "github.com/alibaba/pouch/cri/v1alpha2/types"
 	"github.com/alibaba/pouch/hookplugins"
 
 	"github.com/pkg/errors"

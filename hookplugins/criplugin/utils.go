@@ -9,7 +9,7 @@ import (
 
 	apitypes "github.com/alibaba/pouch/apis/types"
 	runtime "github.com/alibaba/pouch/cri/apis/v1alpha2"
-	critype "github.com/alibaba/pouch/cri/v1alpha2"
+	critype "github.com/alibaba/pouch/cri/v1alpha2/types"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
