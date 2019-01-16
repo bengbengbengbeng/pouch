@@ -6,6 +6,7 @@ import (
 	"github.com/alibaba/pouch/hookplugins"
 
 	"github.com/containerd/containerd"
+	"github.com/sirupsen/logrus"
 )
 
 type imagePlugin struct{}
@@ -16,6 +17,22 @@ func init() {
 
 // PostPull is called after pull image
 func (i *imagePlugin) PostPull(ctx context.Context, snapshotter string, image containerd.Image) error {
-	// TODO: Implemented by the developer
+	// XXX: deal with qcow2 snapshotter, since qcow2 only suit for
+	// kata, but edas need image like pause to run runc/kata container.
+	if snapshotter != "qcow2" {
+		return nil
+	}
+
+	// unpack overlayfs in a goroutine, or time use will be more than twice
+	go func() {
+		// use a new context, or ctx will be canceled after image pull return
+		ctx = context.TODO()
+		if err := image.Unpack(ctx, "overlayfs"); err != nil {
+			logrus.Errorf("in post pull hook, failed to unpack image %s to overlayfs: %s", image.Name(), err)
+		} else {
+			logrus.Infof("in post pull hook, unpack image %s to overlayfs successful", image.Name())
+		}
+	}()
+
 	return nil
 }

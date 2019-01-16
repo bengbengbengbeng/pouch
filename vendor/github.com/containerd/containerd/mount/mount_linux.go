@@ -5,18 +5,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
 var pagesize = 4096
+var nbdLock sync.Mutex
 
 func init() {
 	pagesize = os.Getpagesize()
@@ -34,6 +40,13 @@ type mountOption struct {
 
 // Mount to the provided target path
 func (m *Mount) Mount(target string) error {
+	if m.Type == "qcow2" {
+		if err := mountOverQcow2(m.Source, target); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	var chdir string
 
 	// avoid hitting one page limit of mount argument buffer
@@ -85,6 +98,11 @@ func Unmount(target string, flags int) error {
 }
 
 func unmount(target string, flags int) error {
+	nbd, err := getNbd(target)
+	if err != nil {
+		return err
+	}
+
 	for i := 0; i < 50; i++ {
 		if err := unix.Unmount(target, flags); err != nil {
 			switch err {
@@ -94,6 +112,9 @@ func unmount(target string, flags int) error {
 			default:
 				return err
 			}
+		}
+		if err := umountOverQcow2(nbd); err != nil {
+			return err
 		}
 		return nil
 	}
@@ -331,4 +352,83 @@ func mountAt(chdir string, source, target, ftype string, flags uintptr, data str
 func fatal(v interface{}) {
 	fmt.Fprint(os.Stderr, v)
 	os.Exit(1)
+}
+
+func getNbd(target string) (string, error) {
+	var nbd string
+	output, err := ioutil.ReadFile("/proc/mounts")
+	if err != nil {
+		return "", fmt.Errorf("failed to get /proc/mounts: %s", err)
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		splits := strings.Split(line, " ")
+		if len(splits) == 6 && splits[1] == target &&
+			strings.Contains(splits[0], "/dev/nbd") {
+			nbd = splits[0]
+			break
+		}
+	}
+
+	return nbd, nil
+}
+
+// qemu-nbd -f raw -c /dev/nbd0 base.img
+// mount /dev/nbd0 /mnt/qemu
+func mountOverQcow2(source, target string) error {
+	// link container snapshot to rootfs dir
+	if strings.HasSuffix(target, "rootfs") && strings.Contains(target, "io.containerd") {
+		if err := os.Link(source, filepath.Join(target, "qemu.img")); err != nil {
+			return fmt.Errorf("failed to link qemu image %s to rootfs: %s", source, err)
+		}
+		return nil
+	}
+	nbd, err := findAvailableNbd()
+	if err != nil {
+		return err
+	}
+
+	src := "/dev/nbd" + nbd
+	logrus.Infof("try to mount %s %s to %s with qemu-nbd", source, src, target)
+	if out, err := exec.Command("qemu-nbd", "-f", "qcow2", "-c", src, source).CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to mount qcow2 image %s to %s: %s %s", source, src, err, out)
+	}
+
+	if _, err := exec.Command("mount", src, target).Output(); err != nil {
+		// release nbd device
+		umountOverQcow2(src)
+		return fmt.Errorf("failed to mount %s to %s: %s", src, target, err)
+	}
+
+	return nil
+}
+
+func findAvailableNbd() (string, error) {
+	nbdLock.Lock()
+	defer nbdLock.Unlock()
+
+	var i int
+	for i = 50; i < 100; i++ {
+		// check free nbd device, they do not have /sys/class/block/nbd0/pid exist
+		if _, err := os.Stat(fmt.Sprintf("/sys/class/block/nbd%d/pid", i)); err == nil {
+			continue
+		}
+		break
+	}
+	if i >= 100 {
+		return "", fmt.Errorf("failed to mount qcow2 cause no available nbd device")
+	}
+
+	return fmt.Sprintf("%d", i), nil
+}
+
+// qemu-nbd -d /dev/nbd0
+func umountOverQcow2(nbd string) error {
+	if nbd == "" {
+		return nil
+	}
+	if _, err := exec.Command("qemu-nbd", "-d", nbd).Output(); err != nil {
+		return fmt.Errorf("failed to umount nbd device %s: %s", nbd, err)
+	}
+
+	return nil
 }

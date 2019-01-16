@@ -404,11 +404,13 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s", config.HostConfig.Runtime)
 	}
 
-	var labels map[string]string
+	labels := make(map[string]string)
 	if config.Home != "" {
-		labels = make(map[string]string)
 		labels["home"] = config.Home
 	}
+
+	// set quota for qcow2
+	labels[qcow2Size] = config.DiskQuota[".*"]
 
 	logrus.Infof("pouch labels(%+v)", labels)
 	snapID := id
