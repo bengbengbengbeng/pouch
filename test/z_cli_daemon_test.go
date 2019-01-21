@@ -517,6 +517,9 @@ func (suite *PouchDaemonSuite) TestDaemonWithMultiRuntimes(c *check.C) {
 // when container is stopped and then pouchd restarts, the restore logic should
 // initialize the existing container IO settings even though they are not alive.
 func (suite *PouchDaemonSuite) TestRestartStoppedContainerAfterDaemonRestart(c *check.C) {
+	if environment.IsAliKernel() {
+		c.Skip("pouch for alios can not test TestDaemon, because of config file")
+	}
 	cfgFile := filepath.Join("/tmp", c.TestName())
 	c.Assert(CreateConfigFile(cfgFile, nil), check.IsNil)
 	defer os.RemoveAll(cfgFile)
