@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alibaba/pouch/apis/types"
+	"github.com/alibaba/pouch/daemon/mgr"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -266,4 +267,84 @@ func UniqueStringSlice(s []string) []string {
 		res = append(res, key)
 	}
 	return res
+}
+
+// isCopyPodHostsOn verify whether container is set copyPodHosts
+func isCopyPodHostsOn(config *types.ContainerConfig, hostConfig *types.HostConfig) bool {
+	if getEnv(config.Env, "ali_run_mode") != "vm" {
+		return false
+	}
+
+	if mgr.IsHost(hostConfig.NetworkMode) {
+		return false
+	}
+
+	if config.Labels[copyPodHostsLabelKey] != optionOn {
+		return false
+	}
+
+	return true
+}
+
+// updateContainerForPodHosts should be called in prestart hook if isCopyPodHostsOn returns true
+// if set mounts for /etc/hosts /etc/hostname or /etc/resolv.conf, it will record their host paths
+// in prestart hook args and remove these mounts. This function returns prestart priority and hook path.
+func updateContainerForPodHosts(c *mgr.Container) (int, []string) {
+	resolvConfPath := c.ResolvConfPath
+	hostsPath := c.HostsPath
+	hostnamePath := c.HostnamePath
+
+	mounts := []*types.MountPoint{}
+
+	for _, m := range c.Mounts {
+		if m.Destination == "/etc/hosts" {
+			hostsPath = m.Source
+			continue
+		}
+
+		if m.Destination == "/etc/resolv.conf" {
+			resolvConfPath = m.Source
+			continue
+		}
+
+		if m.Destination == "/etc/hostname" {
+			hostnamePath = m.Source
+			continue
+		}
+
+		mounts = append(mounts, m)
+	}
+
+	c.Mounts = mounts
+
+	// if resolvConfPath is nil, not set prestart hook
+	if resolvConfPath == "" {
+		return 0, nil
+	}
+
+	// set container HostnamePath to resolvConfPath
+	c.ResolvConfPath = resolvConfPath
+
+	args := []string{"/opt/ali-iaas/pouch/bin/prestart_hook_cp", resolvConfPath}
+
+	if hostsPath != "" {
+		args = append(args, hostsPath)
+		// set container HostsPath to hostsPath
+		c.HostsPath = hostsPath
+	} else {
+		// if hostsPath is nil, set none to arg
+		args = append(args, "none")
+	}
+
+	if hostnamePath != "" {
+		args = append(args, hostnamePath)
+		// set container HostnamePath to hostnamePath
+		c.HostnamePath = hostnamePath
+	} else {
+		// if hostnamePath is nil, set none to arg
+		args = append(args, "none")
+	}
+
+	// prestart_copy_pod_hosts_hook should execute after other prestart hooks
+	return -200, args
 }
