@@ -521,6 +521,7 @@ func (suite *PouchDaemonSuite) TestRestartStoppedContainerAfterDaemonRestart(c *
 	if environment.IsAliKernel() {
 		c.Skip("pouch for alios can not test TestDaemon, because of config file")
 	}
+
 	cfgFile := filepath.Join("/tmp", c.TestName())
 	c.Assert(CreateConfigFile(cfgFile, nil), check.IsNil)
 	defer os.RemoveAll(cfgFile)
