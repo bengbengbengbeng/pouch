@@ -115,6 +115,13 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		}
 	}
 
+	hostDNS, _ := createConfig.Labels["ali.host.dns"]
+
+	v, ok := createConfig.Labels["com.alipay.acs.container.server_type"]
+	if (ok && v == "DOCKER_VM") || hostDNS == "true" || getEnv(createConfig.Env, "CopyHosts") == "true" {
+		createConfig.Env = setEnv(createConfig.Env, "ali_run_mode", "vm")
+	}
+
 	// common vm must run as root
 	mode := getEnv(createConfig.Env, "ali_run_mode")
 	if ("common_vm" == mode || "vm" == mode) && createConfig.User != "root" {
