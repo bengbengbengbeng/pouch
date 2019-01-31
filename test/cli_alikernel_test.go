@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
+	"github.com/alibaba/pouch/test/util"
 
 	"github.com/go-check/check"
 	"github.com/gotestyourself/gotestyourself/icmd"
@@ -89,5 +90,34 @@ func (suite *PouchAliKernelSuite) TestAliKernelDiskQuotaMultiWorks(c *check.C) {
 		cmd := "df -h |grep test2"
 		err := command.PouchRun("exec", funcname, "sh", "-c", cmd).Compare(expct)
 		c.Assert(err, check.IsNil)
+	}
+}
+
+// TestAliKernelCgroupNS test container cgroup view should be / on both 3.10 and 4.9 alios
+func (suite *PouchAliKernelSuite) TestAliKernelCgroupNS(c *check.C) {
+	name1 := "TestAliKernelCgroupNS-run"
+	name2 := "TestAliKernelCgroupNS-exec"
+	defer DelContainerForceMultyTime(c, name1)
+	defer DelContainerForceMultyTime(c, name2)
+
+	res := command.PouchRun("run", "--name", name1, busyboxImage, "cat", "/proc/self/cgroup")
+	res.Assert(c, icmd.Success)
+
+	cgroupPaths := util.ParseCgroupFile(res.Stdout())
+	for _, v := range cgroupPaths {
+		if v != "/" {
+			c.Fatalf("unexpected cgroup path on alikernel %v", v)
+		}
+	}
+
+	command.PouchRun("run", "-d", "--name", name2, busyboxImage, "top").Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name2, "cat", "/proc/self/cgroup")
+	res.Assert(c, icmd.Success)
+
+	cgroupPaths = util.ParseCgroupFile(res.Stdout())
+	for _, v := range cgroupPaths {
+		if v != "/" {
+			c.Fatalf("unexpected cgroup path on alikernel %v", v)
+		}
 	}
 }
