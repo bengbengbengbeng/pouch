@@ -66,6 +66,8 @@ var (
 	SpecNetCgroupRate = AnnotationPrefix + "net_cgroup_rate"
 	// SpecNetCgroupCeil defines customization.net_cgroup_ceil
 	SpecNetCgroupCeil = AnnotationPrefix + "net_cgroup_ceil"
+	// SpecNetPriority defines customization.net_priority
+	SpecNetPriority = AnnotationPrefix + "net_priority"
 )
 
 // SupportAnnotation represents the support annotation keys.
@@ -99,4 +101,5 @@ var SupportAnnotation = map[string]struct{}{
 	SpecBlkioDeviceWriteLowIOps:   {},
 	SpecNetCgroupRate:             {},
 	SpecNetCgroupCeil:             {},
+	SpecNetPriority:               {},
 }

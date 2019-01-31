@@ -243,6 +243,7 @@ SpecBlkioDeviceWriteLowBps    = "customization.blkio_device_write_low_bps"
 SpecBlkioDeviceWriteLowIOps   = "customization.blkio_device_write_low_iops"
 SpecNetCgroupRate             = "customization.net_cgroup_rate"
 SpecNetCgroupCeil             = "customization.net_cgroup_ceil"
+SpecNetPriority               = "customization.net_priority"
 ```
 
 但是原先在alidocker中有些是结构体的方式传递的参数，转化到`map[string][string]`需要将`struct`按照固定的规则转换成`string`
