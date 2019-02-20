@@ -13,12 +13,12 @@ func TestSliceThrottleDeviceString(t *testing.T) {
 	)
 
 	tds1 := &types.ThrottleDevice{
-		"abc",
-		1,
+		Path: "abc",
+		Rate: 1,
 	}
 	tds2 := &types.ThrottleDevice{
-		"def",
-		2,
+		Path: "def",
+		Rate: 2,
 	}
 	tdsSlice1 = append(tdsSlice1, tds1)
 	tdsSlice2 = append(tdsSlice2, tds1, tds2)
