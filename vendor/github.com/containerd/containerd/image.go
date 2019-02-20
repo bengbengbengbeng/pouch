@@ -101,7 +101,6 @@ func (i *image) Unpack(ctx context.Context, snapshotterName string) error {
 
 	opts := []snapshots.Opt{
 		snapshots.WithLabels(map[string]string{"type": "image"}),
-		snapshots.WithLabels(i.i.Labels),
 	}
 
 	var (
