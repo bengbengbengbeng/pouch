@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"runtime"
@@ -156,17 +155,6 @@ type ContainerCreateConfigWrapper struct {
 	HostConfig *HostConfigWrapper `json:"HostConfig,omitempty"`
 }
 
-func sliceThrottleDeviceString(tds []*types.ThrottleDevice) string {
-	res := make([]string, len(tds), 0)
-	for _, t := range tds {
-		if t == nil {
-			continue
-		}
-		res = append(res, fmt.Sprintf("%s:%d", t.Path, t.Rate))
-	}
-	return strings.Join(res, " ")
-}
-
 func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		buffer, _ := ioutil.ReadAll(req.Body)
@@ -278,7 +266,7 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 			specAnnotation[hp.SpecBlkioDeviceReadLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceReadLowIOps)
 		}
 		if len(resourceWrapper.BlkioDeviceWriteLowBps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceReadLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowBps)
+			specAnnotation[hp.SpecBlkioDeviceWriteLowBps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowBps)
 		}
 		if len(resourceWrapper.BlkioDeviceWriteLowIOps) != 0 {
 			specAnnotation[hp.SpecBlkioDeviceWriteLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowIOps)
@@ -289,7 +277,7 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 			specAnnotation[hp.SpecNetCgroupRate] = resourceWrapper.NetCgroupRate
 		}
 		if resourceWrapper.NetCgroupCeil != "" {
-			specAnnotation[hp.SpecNetCgroupRate] = resourceWrapper.NetCgroupCeil
+			specAnnotation[hp.SpecNetCgroupCeil] = resourceWrapper.NetCgroupCeil
 		}
 
 		config.ContainerConfig.SpecAnnotation = specAnnotation
