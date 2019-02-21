@@ -207,15 +207,18 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	}
 
 	// generate quota id as needed
-	if createConfig.Labels["AutoQuotaId"] == optionOn || (diskQuota != "" &&
-		!strings.Contains(diskQuota, ";") && !strings.Contains(diskQuota, "=")) {
-		if createConfig.QuotaID == "" || createConfig.QuotaID == "0" {
-			qid := createConfig.Labels["QuotaId"]
-			if qid != "" && qid != "0" {
-				createConfig.QuotaID = qid
-			} else {
-				createConfig.QuotaID = "-1"
-			}
+	labelQuotaID := createConfig.Labels["QuotaId"]
+	if !isSetQuotaID(createConfig.QuotaID) {
+		if isSetQuotaID(labelQuotaID) {
+			createConfig.QuotaID = labelQuotaID
+		} else if createConfig.Labels["AutoQuotaId"] == optionOn ||
+			(diskQuota != "" &&
+				!strings.Contains(diskQuota, ";") &&
+				!strings.Contains(diskQuota, "=") &&
+				!strings.Contains(diskQuota, "&")) {
+			// if set AutoQuotaId=true or the format: DiskQuota=60G,
+			// it need set QuotaID=-1
+			createConfig.QuotaID = "-1"
 		}
 	}
 
@@ -322,4 +325,11 @@ func inSlice(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func isSetQuotaID(id string) bool {
+	if id == "" || id == "0" {
+		return false
+	}
+	return true
 }
