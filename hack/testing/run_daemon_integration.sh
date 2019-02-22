@@ -4,6 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 source utils.sh
+source kata.sh
 
 readonly REPO_BASE="$(cd ../../ && pwd -P)"
 
@@ -60,13 +61,16 @@ main() {
   local job_id=$1
   cmd="pouchd-integration"
   flags=" -test.coverprofile=${coverage_profile} DEVEL"
-  flags="${flags} --add-runtime runv=runv"
+  flags="${flags} --add-runtime runv=runv --add-runtime kata-runtime=kata-runtime"
 
   integration::stop_local_persist
   integration::run_local_persist_background "${local_persist_log}"
 
   integration::stop_mount_lxcfs
   integration::run_mount_lxcfs_background
+
+  # install daishu to run kata releated test
+  integration::install_daishu
 
   integration::stop_pouchd
   integration::run_pouchd_background "${cmd}" "${flags}" "${pouchd_log}"

@@ -239,3 +239,12 @@ func SupportSystemdCgroupDriver() bool {
 	}
 	return fi.IsDir()
 }
+
+// IsPhysicalHost checks if host machine is physical.
+func IsPhysicalHost() bool {
+	cmd := `dmesg | grep -q "Hypervisor detected"`
+	if icmd.RunCommand("sh", "-c", cmd).ExitCode == 0 {
+		return false
+	}
+	return true
+}
