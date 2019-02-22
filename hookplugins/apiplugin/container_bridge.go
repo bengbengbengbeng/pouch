@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -293,4 +295,81 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 
 		return h(ctx, rw, req)
 	}
+}
+
+func containerInspectWrapper(h serverTypes.Handler) serverTypes.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		if !utils.IsStale(ctx, req) {
+			return h(ctx, rw, req)
+		}
+
+		wrapRW := NewWrapResponseWriter()
+		err := h(ctx, wrapRW, req)
+		if err != nil {
+			return err
+		}
+
+		data, err := ioutil.ReadAll(wrapRW)
+		if err != nil {
+			return httputils.NewHTTPError(fmt.Errorf("failed to decode response body: %v", err), http.StatusInternalServerError)
+		}
+
+		resp := &InnerContainerJSON{}
+		err = json.Unmarshal(data, resp)
+		if err != nil {
+			return httputils.NewHTTPError(fmt.Errorf("failed to decode response body: %v", err), http.StatusInternalServerError)
+		}
+
+		err = convertAnnotationToDockerHostConfig(resp.Config.SpecAnnotation, &resp.HostConfig.InnerResources.ResourcesWrapper)
+		if err != nil {
+			return httputils.NewHTTPError(fmt.Errorf("failed to convert annotation to docker host config: %v", err), http.StatusInternalServerError)
+		}
+
+		return server.EncodeResponse(rw, http.StatusOK, resp)
+	}
+}
+
+func convertAnnotationToDockerHostConfig(specAnnotation map[string]string, resource *ResourcesWrapper) error {
+	if len(specAnnotation) == 0 {
+		return nil
+	}
+
+	reflectMap := resourceWrapReflectMap()
+
+	rElem := reflect.ValueOf(resource).Elem()
+
+	for annotationKey, data := range specAnnotation {
+		if _, exist := hp.SupportAnnotation[annotationKey]; !exist {
+			return fmt.Errorf("Annotation not support key %s", annotationKey)
+		}
+
+		// get covertInfo by annotation key
+		info, exist := reflectMap[annotationKey]
+		if !exist {
+			return fmt.Errorf("Annotation not support key %s", annotationKey)
+		}
+
+		// convert string to target value by covertFunc
+		value, err := info.convertFunc(data)
+		if err != nil {
+			return fmt.Errorf("failed to convert annotation %s to hostconfig field %s: %v", annotationKey, info.fieldName, err)
+		}
+
+		// set value to reflect value
+		i := reflect.ValueOf(value)
+		if !i.IsValid() {
+			return fmt.Errorf("failed to reflect value %v, while field is %s and annotation is %s", value, info.fieldName, data)
+		}
+
+		// get struct field by field name
+		field := rElem.FieldByName(info.fieldName)
+		if !field.IsValid() {
+			return fmt.Errorf("field %s is not defined", info.fieldName)
+		}
+
+		// set value i to struct field
+		field.Set(i)
+	}
+
+	return nil
 }
