@@ -346,7 +346,7 @@ func updateContainerForPodHosts(c *mgr.Container) (int, []string) {
 	// set container HostnamePath to resolvConfPath
 	c.ResolvConfPath = resolvConfPath
 
-	args := []string{"/opt/ali-iaas/pouch/bin/prestart_hook_cp", resolvConfPath}
+	args := []string{"/opt/ali-iaas/pouch/bin/prestart_hook_alipay", "CopyPodHosts", resolvConfPath}
 
 	if hostsPath != "" {
 		args = append(args, hostsPath)
@@ -368,4 +368,13 @@ func updateContainerForPodHosts(c *mgr.Container) (int, []string) {
 
 	// prestart_copy_pod_hosts_hook should execute after other prestart hooks
 	return -200, args
+}
+
+// isCpusharePreload verify whether container is set prestart_cpushare_preload
+func isCpusharePreload(config *types.ContainerConfig) bool {
+	if getEnv(config.Env, "ALIPAY_SIGMA_CPUMODE") == "cpushare" {
+		return true
+	}
+
+	return false
 }
