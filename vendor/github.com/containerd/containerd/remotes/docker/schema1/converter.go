@@ -1,3 +1,19 @@
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package schema1
 
 import (
@@ -8,13 +24,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/containerd/containerd/archive/compression"
@@ -23,14 +37,15 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/remotes"
-	"github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go"
+	digest "github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/pkg/errors"
 )
 
 const (
 	manifestSizeLimit            = 8e6 // 8MB
-	labelDockerSchema1EmptyLayer = "containerd.io/docker.schema1.empty.layer"
+	labelDockerSchema1EmptyLayer = "containerd.io/docker.schema1.empty-layer"
 )
 
 type blobState struct {
@@ -107,8 +122,41 @@ func (c *Converter) Handle(ctx context.Context, desc ocispec.Descriptor) ([]ocis
 	}
 }
 
+// ConvertOptions provides options on converting a docker schema1 manifest.
+type ConvertOptions struct {
+	// ManifestMediaType specifies the media type of the manifest OCI descriptor.
+	ManifestMediaType string
+
+	// ConfigMediaType specifies the media type of the manifest config OCI
+	// descriptor.
+	ConfigMediaType string
+}
+
+// ConvertOpt allows configuring a convert operation.
+type ConvertOpt func(context.Context, *ConvertOptions) error
+
+// UseDockerSchema2 is used to indicate that a schema1 manifest should be
+// converted into the media types for a docker schema2 manifest.
+func UseDockerSchema2() ConvertOpt {
+	return func(ctx context.Context, o *ConvertOptions) error {
+		o.ManifestMediaType = images.MediaTypeDockerSchema2Manifest
+		o.ConfigMediaType = images.MediaTypeDockerSchema2Config
+		return nil
+	}
+}
+
 // Convert a docker manifest to an OCI descriptor
-func (c *Converter) Convert(ctx context.Context) (ocispec.Descriptor, error) {
+func (c *Converter) Convert(ctx context.Context, opts ...ConvertOpt) (ocispec.Descriptor, error) {
+	co := ConvertOptions{
+		ManifestMediaType: ocispec.MediaTypeImageManifest,
+		ConfigMediaType:   ocispec.MediaTypeImageConfig,
+	}
+	for _, opt := range opts {
+		if err := opt(ctx, &co); err != nil {
+			return ocispec.Descriptor{}, err
+		}
+	}
+
 	history, diffIDs, err := c.schema1ManifestHistory()
 	if err != nil {
 		return ocispec.Descriptor{}, errors.Wrap(err, "schema 1 conversion failed")
@@ -125,13 +173,13 @@ func (c *Converter) Convert(ctx context.Context) (ocispec.Descriptor, error) {
 		DiffIDs: diffIDs,
 	}
 
-	b, err := json.Marshal(img)
+	b, err := json.MarshalIndent(img, "", "   ")
 	if err != nil {
 		return ocispec.Descriptor{}, errors.Wrap(err, "failed to marshal image")
 	}
 
 	config := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageConfig,
+		MediaType: co.ConfigMediaType,
 		Digest:    digest.Canonical.FromBytes(b),
 		Size:      int64(len(b)),
 	}
@@ -149,13 +197,13 @@ func (c *Converter) Convert(ctx context.Context) (ocispec.Descriptor, error) {
 		Layers: layers,
 	}
 
-	mb, err := json.Marshal(manifest)
+	mb, err := json.MarshalIndent(manifest, "", "   ")
 	if err != nil {
 		return ocispec.Descriptor{}, errors.Wrap(err, "failed to marshal image")
 	}
 
 	desc := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageManifest,
+		MediaType: co.ManifestMediaType,
 		Digest:    digest.Canonical.FromBytes(mb),
 		Size:      int64(len(mb)),
 	}
@@ -167,12 +215,12 @@ func (c *Converter) Convert(ctx context.Context) (ocispec.Descriptor, error) {
 	}
 
 	ref := remotes.MakeRefKey(ctx, desc)
-	if err := content.WriteBlob(ctx, c.contentStore, ref, bytes.NewReader(mb), desc.Size, desc.Digest, content.WithLabels(labels)); err != nil {
+	if err := content.WriteBlob(ctx, c.contentStore, ref, bytes.NewReader(mb), desc, content.WithLabels(labels)); err != nil {
 		return ocispec.Descriptor{}, errors.Wrap(err, "failed to write config")
 	}
 
 	ref = remotes.MakeRefKey(ctx, config)
-	if err := content.WriteBlob(ctx, c.contentStore, ref, bytes.NewReader(b), config.Size, config.Digest); err != nil {
+	if err := content.WriteBlob(ctx, c.contentStore, ref, bytes.NewReader(b), config); err != nil {
 		return ocispec.Descriptor{}, errors.Wrap(err, "failed to write config")
 	}
 
@@ -213,30 +261,18 @@ func (c *Converter) fetchBlob(ctx context.Context, desc ocispec.Descriptor) erro
 	var (
 		ref            = remotes.MakeRefKey(ctx, desc)
 		calc           = newBlobStateCalculator()
-		retry          = 16
-		size           = desc.Size
 		compressMethod = compression.Gzip
 	)
 
 	// size may be unknown, set to zero for content ingest
-	if size == -1 {
-		size = 0
+	ingestDesc := desc
+	if ingestDesc.Size == -1 {
+		ingestDesc.Size = 0
 	}
 
-tryit:
-	cw, err := c.contentStore.Writer(ctx, ref, size, desc.Digest)
+	cw, err := content.OpenWriter(ctx, c.contentStore, content.WithRef(ref), content.WithDescriptor(ingestDesc))
 	if err != nil {
-		if errdefs.IsUnavailable(err) {
-			select {
-			case <-time.After(time.Millisecond * time.Duration(rand.Intn(retry))):
-				if retry < 2048 {
-					retry = retry << 1
-				}
-				goto tryit
-			case <-ctx.Done():
-				return err
-			}
-		} else if !errdefs.IsAlreadyExists(err) {
+		if !errdefs.IsAlreadyExists(err) {
 			return err
 		}
 
@@ -244,11 +280,12 @@ tryit:
 		if err != nil {
 			return err
 		}
+
 		if reuse {
 			return nil
 		}
 
-		ra, err := c.contentStore.ReaderAt(ctx, desc.Digest)
+		ra, err := c.contentStore.ReaderAt(ctx, desc)
 		if err != nil {
 			return err
 		}
@@ -265,7 +302,6 @@ tryit:
 		if err != nil {
 			return err
 		}
-
 	} else {
 		defer cw.Close()
 
@@ -294,11 +330,10 @@ tryit:
 		eg.Go(func() error {
 			defer pw.Close()
 
-			return content.Copy(ctx, cw, io.TeeReader(rc, pw), size, desc.Digest)
+			return content.Copy(ctx, cw, io.TeeReader(rc, pw), ingestDesc.Size, ingestDesc.Digest)
 		})
 
 		if err := eg.Wait(); err != nil {
-			log.G(ctx).Errorf("fetch blob %s error %v", desc.Digest, err)
 			return err
 		}
 	}
@@ -312,7 +347,7 @@ tryit:
 	}
 
 	if compressMethod == compression.Uncompressed {
-		log.G(ctx).Debugf("change media type of layer %s from gzip to tar", desc.Digest)
+		log.G(ctx).WithField("id", desc.Digest).Debugf("changed media type for uncompressed schema1 layer blob")
 		desc.MediaType = images.MediaTypeDockerSchema2Layer
 	}
 
@@ -343,6 +378,12 @@ func (c *Converter) reuseLabelBlobState(ctx context.Context, desc ocispec.Descri
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get blob info")
 	}
+	desc.Size = cinfo.Size
+
+	diffID, ok := cinfo.Labels["containerd.io/uncompressed"]
+	if !ok {
+		return false, nil
+	}
 
 	emptyVal, ok := cinfo.Labels[labelDockerSchema1EmptyLayer]
 	if !ok {
@@ -351,17 +392,12 @@ func (c *Converter) reuseLabelBlobState(ctx context.Context, desc ocispec.Descri
 
 	isEmpty, err := strconv.ParseBool(emptyVal)
 	if err != nil {
-		log.G(ctx).WithField("id", desc.Digest).Warnf("failed to parse bool from label %s: %v", labelDockerSchema1EmptyLayer, emptyVal)
-		return false, nil
-	}
-
-	desc.Size = cinfo.Size
-	diffID, ok := cinfo.Labels["containerd.io/uncompressed"]
-	if !ok {
+		log.G(ctx).WithField("id", desc.Digest).Warnf("failed to parse bool from label %s: %v", labelDockerSchema1EmptyLayer, isEmpty)
 		return false, nil
 	}
 
 	bState := blobState{empty: isEmpty}
+
 	if bState.diffID, err = digest.Parse(diffID); err != nil {
 		log.G(ctx).WithField("id", desc.Digest).Warnf("failed to parse digest from label containerd.io/uncompressed: %v", diffID)
 		return false, nil

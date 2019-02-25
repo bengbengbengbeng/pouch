@@ -1,62 +1,57 @@
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package mount
 
 import (
-	"bytes"
-	"encoding/json"
-	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/containerd/containerd/sys"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
 var pagesize = 4096
-var nbdLock sync.Mutex
 
 func init() {
 	pagesize = os.Getpagesize()
-
-	reexec.Register("containerd-mountat", mountAtMain)
-}
-
-type mountOption struct {
-	Source string
-	Target string
-	FsType string
-	Flags  uintptr
-	Data   string
 }
 
 // Mount to the provided target path
 func (m *Mount) Mount(target string) error {
-	if m.Type == "qcow2" {
-		if err := mountOverQcow2(m.Source, target); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	var chdir string
+	var (
+		chdir   string
+		options = m.Options
+	)
 
 	// avoid hitting one page limit of mount argument buffer
 	//
-	// NOTE: 512 is magic number as buffer.
-	if m.Type == "overlay" && lowerdirOptSize(m) > (pagesize-512) {
-		chdir, m = compactLowerdirOption(m)
+	// NOTE: 512 is a buffer during pagesize check.
+	if m.Type == "overlay" && optionsSize(options) >= pagesize-512 {
+		chdir, options = compactLowerdirOption(options)
 	}
 
-	flags, data := parseMountOptions(m.Options)
+	flags, data := parseMountOptions(options)
+	if len(data) > pagesize {
+		return errors.Errorf("mount options is too long")
+	}
 
 	// propagation types.
 	const ptypes = unix.MS_SHARED | unix.MS_PRIVATE | unix.MS_SLAVE | unix.MS_UNBINDABLE
@@ -98,11 +93,6 @@ func Unmount(target string, flags int) error {
 }
 
 func unmount(target string, flags int) error {
-	nbd, err := getNbd(target)
-	if err != nil {
-		return err
-	}
-
 	for i := 0; i < 50; i++ {
 		if err := unix.Unmount(target, flags); err != nil {
 			switch err {
@@ -112,9 +102,6 @@ func unmount(target string, flags int) error {
 			default:
 				return err
 			}
-		}
-		if err := umountOverQcow2(nbd); err != nil {
-			return err
 		}
 		return nil
 	}
@@ -195,26 +182,26 @@ func parseMountOptions(options []string) (int, string) {
 }
 
 // compactLowerdirOption updates overlay lowdir option and returns the common
-// dir in the all the lowdirs.
-func compactLowerdirOption(m *Mount) (string, *Mount) {
-	idx, dirs := findOverlayLowerdirs(m)
-	// no need to compact if there is only one lowerdir
+// dir among all the lowdirs.
+func compactLowerdirOption(opts []string) (string, []string) {
+	idx, dirs := findOverlayLowerdirs(opts)
 	if idx == -1 || len(dirs) == 1 {
-		return "", m
+		// no need to compact if there is only one lowerdir
+		return "", opts
 	}
 
 	// find out common dir
 	commondir := longestCommonPrefix(dirs)
 	if commondir == "" {
-		return "", m
+		return "", opts
 	}
 
-	// NOTE: the snapshot id is based on digits. in order to avoid to get
-	// snapshots/x, need to back to parent snapshots dir. however, there is
-	// assumption that the common dir is ${root}/io.containerd.v1.overlayfs.
+	// NOTE: the snapshot id is based on digits.
+	// in order to avoid to get snapshots/x, should be back to parent dir.
+	// however, there is assumption that the common dir is ${root}/io.containerd.v1.overlayfs/snapshots.
 	commondir = path.Dir(commondir)
 	if commondir == "/" {
-		return "", m
+		return "", opts
 	}
 	commondir = commondir + "/"
 
@@ -223,30 +210,21 @@ func compactLowerdirOption(m *Mount) (string, *Mount) {
 		newdirs = append(newdirs, dir[len(commondir):])
 	}
 
-	m.Options = append(m.Options[:idx], m.Options[idx+1:]...)
-	m.Options = append(m.Options, fmt.Sprintf("lowerdir=%s", strings.Join(newdirs, ":")))
-	return commondir, m
-}
-
-// lowerdirOptSize returns the bytes of lowerdir option.
-func lowerdirOptSize(m *Mount) int {
-	for _, opt := range m.Options {
-		if strings.HasPrefix(opt, "lowerdir=") {
-			return len(opt)
-		}
-	}
-	return 0
+	newopts := copyOptions(opts)
+	newopts = append(newopts[:idx], newopts[idx+1:]...)
+	newopts = append(newopts, fmt.Sprintf("lowerdir=%s", strings.Join(newdirs, ":")))
+	return commondir, newopts
 }
 
 // findOverlayLowerdirs returns the index of lowerdir in mount's options and
 // all the lowerdir target.
-func findOverlayLowerdirs(m *Mount) (int, []string) {
+func findOverlayLowerdirs(opts []string) (int, []string) {
 	var (
 		idx    = -1
 		prefix = "lowerdir="
 	)
 
-	for i, opt := range m.Options {
+	for i, opt := range opts {
 		if strings.HasPrefix(opt, prefix) {
 			idx = i
 			break
@@ -256,7 +234,7 @@ func findOverlayLowerdirs(m *Mount) (int, []string) {
 	if idx == -1 {
 		return -1, nil
 	}
-	return idx, strings.Split(m.Options[idx][len(prefix):], ":")
+	return idx, strings.Split(opts[idx][len(prefix):], ":")
 }
 
 // longestCommonPrefix finds the longest common prefix in the string slice.
@@ -287,148 +265,44 @@ func longestCommonPrefix(strs []string) string {
 	return min
 }
 
-// mountAtMain acts like execute binary.
-func mountAtMain() {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	flag.Parse()
-	if err := os.Chdir(flag.Arg(0)); err != nil {
-		fatal(err)
+// copyOptions copies the options.
+func copyOptions(opts []string) []string {
+	if len(opts) == 0 {
+		return nil
 	}
 
-	var opt mountOption
-	if err := json.NewDecoder(os.Stdin).Decode(&opt); err != nil {
-		fatal(err)
-	}
-
-	if err := unix.Mount(opt.Source, opt.Target, opt.FsType, opt.Flags, opt.Data); err != nil {
-		fatal(err)
-	}
-	os.Exit(0)
+	acopy := make([]string, len(opts))
+	copy(acopy, opts)
+	return acopy
 }
 
-// mountAt will re-exec mountAtMain to change work dir if necessary.
-func mountAt(chdir string, source, target, ftype string, flags uintptr, data string) error {
+// optionsSize returns the byte size of options of mount.
+func optionsSize(opts []string) int {
+	size := 0
+	for _, opt := range opts {
+		size += len(opt)
+	}
+	return size
+}
+
+func mountAt(chdir string, source, target, fstype string, flags uintptr, data string) error {
 	if chdir == "" {
-		return unix.Mount(source, target, ftype, flags, data)
+		return unix.Mount(source, target, fstype, flags, data)
 	}
 
-	opt := mountOption{
-		Source: source,
-		Target: target,
-		FsType: ftype,
-		Flags:  flags,
-		Data:   data,
-	}
-
-	cmd := reexec.Command("containerd-mountat", chdir)
-
-	w, err := cmd.StdinPipe()
+	f, err := os.Open(chdir)
 	if err != nil {
-		return fmt.Errorf("mountat error on open stdin pipe: %v", err)
+		return errors.Wrap(err, "failed to mountat")
 	}
+	defer f.Close()
 
-	out := bytes.NewBuffer(nil)
-	cmd.Stdout, cmd.Stderr = out, out
-
-	if err := cmd.Start(); err != nil {
-		w.Close()
-		return fmt.Errorf("mountat error on start cmd: %v", err)
-	}
-
-	if err := json.NewEncoder(w).Encode(opt); err != nil {
-		w.Close()
-		return fmt.Errorf("mountat json-encode option into pipe failed: %v", err)
-	}
-
-	w.Close()
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("mountat error: %v: combined output: %v", err, out)
-	}
-	return nil
-}
-
-func fatal(v interface{}) {
-	fmt.Fprint(os.Stderr, v)
-	os.Exit(1)
-}
-
-func getNbd(target string) (string, error) {
-	var nbd string
-	output, err := ioutil.ReadFile("/proc/mounts")
+	fs, err := f.Stat()
 	if err != nil {
-		return "", fmt.Errorf("failed to get /proc/mounts: %s", err)
-	}
-	for _, line := range strings.Split(string(output), "\n") {
-		splits := strings.Split(line, " ")
-		if len(splits) == 6 && splits[1] == target &&
-			strings.Contains(splits[0], "/dev/nbd") {
-			nbd = splits[0]
-			break
-		}
+		return errors.Wrap(err, "failed to mountat")
 	}
 
-	return nbd, nil
-}
-
-// qemu-nbd -f raw -c /dev/nbd0 base.img
-// mount /dev/nbd0 /mnt/qemu
-func mountOverQcow2(source, target string) error {
-	// link container snapshot to rootfs dir
-	if strings.HasSuffix(target, "rootfs") && strings.Contains(target, "io.containerd") {
-		if err := os.Link(source, filepath.Join(target, "qemu.img")); err != nil {
-			return fmt.Errorf("failed to link qemu image %s to rootfs: %s", source, err)
-		}
-		return nil
+	if !fs.IsDir() {
+		return errors.Wrap(errors.Errorf("%s is not dir", chdir), "failed to mountat")
 	}
-	nbd, err := findAvailableNbd()
-	if err != nil {
-		return err
-	}
-
-	src := "/dev/nbd" + nbd
-	logrus.Infof("try to mount %s %s to %s with qemu-nbd", source, src, target)
-	if out, err := exec.Command("qemu-nbd", "-f", "qcow2", "-c", src, source).CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to mount qcow2 image %s to %s: %s %s", source, src, err, out)
-	}
-
-	if _, err := exec.Command("mount", src, target).Output(); err != nil {
-		// release nbd device
-		umountOverQcow2(src)
-		return fmt.Errorf("failed to mount %s to %s: %s", src, target, err)
-	}
-
-	return nil
-}
-
-func findAvailableNbd() (string, error) {
-	nbdLock.Lock()
-	defer nbdLock.Unlock()
-
-	var i int
-	for i = 50; i < 100; i++ {
-		// check free nbd device, they do not have /sys/class/block/nbd0/pid exist
-		if _, err := os.Stat(fmt.Sprintf("/sys/class/block/nbd%d/pid", i)); err == nil {
-			continue
-		}
-		break
-	}
-	if i >= 100 {
-		return "", fmt.Errorf("failed to mount qcow2 cause no available nbd device")
-	}
-
-	return fmt.Sprintf("%d", i), nil
-}
-
-// qemu-nbd -d /dev/nbd0
-func umountOverQcow2(nbd string) error {
-	if nbd == "" {
-		return nil
-	}
-	if _, err := exec.Command("qemu-nbd", "-d", nbd).Output(); err != nil {
-		return fmt.Errorf("failed to umount nbd device %s: %s", nbd, err)
-	}
-
-	return nil
+	return errors.Wrap(sys.FMountat(f.Fd(), source, target, fstype, flags, data), "failed to mountat")
 }
