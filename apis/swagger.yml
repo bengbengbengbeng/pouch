@@ -2523,6 +2523,12 @@ definitions:
             x-nullable: true
             additionalProperties:
               type: "string"
+          SpecAnnotation:
+            type: "object"
+            description: "update specAnnotation for container"
+            x-nullable: true
+            additionalProperties:
+              type: "string"
 
   ContainerUpgradeConfig:
     description: |
