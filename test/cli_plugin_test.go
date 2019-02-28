@@ -51,7 +51,7 @@ func (suite *PouchPluginSuite) TestRunQuotaId(c *check.C) {
 	name := "TestRunQuotaId"
 	ID := "16777216"
 
-	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "QuotaId="+ID, busyboxImage, "top")
+	res := command.PouchRun("run", "-d", "--name", name, "-l", "DiskQuota=10G", "-l", "QuotaId="+ID, busyboxImage, "top")
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -67,7 +67,7 @@ func (suite *PouchPluginSuite) TestRunAutoQuotaId(c *check.C) {
 	name := "TestRunAutoQuotaId"
 	AutoQuotaIDValue := "true"
 
-	res := command.PouchRun("run", "-d", "--name", name, "--label", "DiskQuota=10G", "--label", "AutoQuotaId="+AutoQuotaIDValue, busyboxImage, "top")
+	res := command.PouchRun("run", "-d", "--name", name, "-l", "DiskQuota=10G", "-l", "AutoQuotaId="+AutoQuotaIDValue, busyboxImage, "top")
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -377,7 +377,7 @@ func (suite *PouchPluginSuite) TestDropCap(c *check.C) {
 // will convert it to env pouchSupportCgroup=true
 func (suite *PouchPluginSuite) TestPouchLabelConvert(c *check.C) {
 	name := "TestLabelPouchSupportCgroup"
-	res := command.PouchRun("run", "-d", "--label", "pouch.SupportCgroup=true", "--name", name, alios7u)
+	res := command.PouchRun("run", "-d", "-l", "pouch.SupportCgroup=true", "--name", name, alios7u)
 	defer DelContainerForceMultyTime(c, name)
 	res.Assert(c, icmd.Success)
 
@@ -701,5 +701,588 @@ func (suite *PouchPluginSuite) TestRichContainerCompatible(c *check.C) {
 	output = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name3).Stdout()
 	if !strings.Contains(output, expectedstring) {
 		c.Errorf("%s should contains %s", output, expectedstring)
+	}
+}
+
+// TestLabelDiskQuotaFull: set -l DiskQuota=10G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaFull(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaFull1",
+			label: "-l DiskQuota=10G",
+		},
+		{
+			cname: "TestLabelDiskQuotaFull2",
+			label: "-l DiskQuota=10G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaFull3",
+			label: "-l DiskQuota=10G -l AutoQuotaId=true -l QuotaId=16777710",
+		},
+		{
+			cname: "TestLabelDiskQuotaFull4",
+			label: "-l DiskQuota=10G -l QuotaId=16777715",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		ret.Assert(c, icmd.Success)
+		defer command.PouchRun("rm", "-vf", test.cname)
+
+		// check df output
+		output := ret.Stdout()
+		templ := ""
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"overlay",
+				"/abc",
+				"/def",
+				"/ghi",
+				"/jkl",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] != "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if templ == "" {
+						templ = strings.Join(parts[1:3], " ")
+					} else {
+						if strings.Join(parts[1:3], " ") != templ {
+							c.Fatalf("failed to set disk quota: %s", line)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaRootFS: set -l DiskQuota=/=10G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaRootFS(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaRootFS1",
+			label: "-l DiskQuota=/=10G",
+		},
+		{
+			cname: "TestLabelDiskQuotaRootFS2",
+			label: "-l DiskQuota=/=10G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaRootFS3",
+			label: "-l DiskQuota=/=10G -l AutoQuotaId=true -l QuotaId=16777720",
+		},
+		{
+			cname: "TestLabelDiskQuotaRootFS4",
+			label: "-l DiskQuota=/=10G -l QuotaId=16777725",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		ret.Assert(c, icmd.Success)
+		defer command.PouchRun("rm", "-vf", test.cname)
+
+		// check df output
+		output := ret.Stdout()
+		fmt.Printf("%s\n\n", output)
+
+		templ := ""
+		// check root fs
+		for _, line := range strings.Split(output, "\n") {
+			if strings.Contains(line, "overlay") {
+				parts := strings.Fields(line)
+				if len(parts) != 6 {
+					c.Fatalf("invalid format: %s", line)
+				}
+
+				if parts[1] != "10485760" {
+					c.Fatalf("failed to set disk quota: %s", line)
+				}
+
+				templ = strings.Join(parts[1:3], " ")
+				break
+			}
+		}
+
+		if templ == "" {
+			c.Fatalf("failed to get templates disk quota")
+		}
+
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"/abc",
+				"/def",
+				"/ghi",
+				"/jkl",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] == "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if strings.Join(parts[1:3], " ") == templ {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaMountPoint: set -l DiskQuota=/abc=10G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaMountPoint(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaMountPoint1",
+			label: "-l DiskQuota=/abc=10G",
+		},
+		{
+			cname: "TestLabelDiskQuotaMountPoint2",
+			label: "-l DiskQuota=/abc=10G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaMountPoint3",
+			label: "-l DiskQuota=/abc=10G -l AutoQuotaId=true -l QuotaId=16777730",
+		},
+		{
+			cname: "TestLabelDiskQuotaMountPoint4",
+			label: "-l DiskQuota=/abc=10G -l QuotaId=16777735",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		ret.Assert(c, icmd.Success)
+		defer command.PouchRun("rm", "-vf", test.cname)
+
+		// check df output
+		output := ret.Stdout()
+		fmt.Printf("%s\n\n", output)
+
+		templ := ""
+		// check mount point /abc
+		for _, line := range strings.Split(output, "\n") {
+			if strings.Contains(line, "/abc") {
+				parts := strings.Fields(line)
+				if len(parts) != 6 {
+					c.Fatalf("invalid format: %s", line)
+				}
+
+				if parts[1] != "10485760" {
+					c.Fatalf("failed to set disk quota: %s", line)
+				}
+
+				templ = strings.Join(parts[1:3], " ")
+				break
+			}
+		}
+
+		if templ == "" {
+			c.Fatalf("failed to get templates disk quota")
+		}
+
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"overlay",
+				"/def",
+				"/ghi",
+				"/jkl",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] == "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if strings.Join(parts[1:3], " ") == templ {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaAddOperate: set -l DiskQuota=/&/abc=10G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaAddOperate(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaAddOperate1",
+			label: "-l DiskQuota=/&/abc=10G",
+		},
+		{
+			cname: "TestLabelDiskQuotaAddOperate2",
+			label: "-l DiskQuota=/&/abc=10G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaAddOperate3",
+			label: "-l DiskQuota=/&/abc=10G -l AutoQuotaId=true -l QuotaId=16777740",
+		},
+		{
+			cname: "TestLabelDiskQuotaAddOperate4",
+			label: "-l DiskQuota=/&/abc=10G -l QuotaId=16777745",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		ret.Assert(c, icmd.Success)
+		defer command.PouchRun("rm", "-vf", test.cname)
+
+		// check df output
+		output := ret.Stdout()
+		fmt.Printf("%s\n\n", output)
+
+		templ := ""
+		// check same quota rootfs and /abc
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"overlay",
+				"/abc",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] != "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if templ == "" {
+						templ = strings.Join(parts[1:3], " ")
+					} else {
+						if strings.Join(parts[1:3], " ") != templ {
+							c.Fatalf("failed to set disk quota: %s", line)
+						}
+					}
+				}
+			}
+		}
+
+		if templ == "" {
+			c.Fatalf("failed to get templates disk quota")
+		}
+
+		// check different mount point
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"/def",
+				"/ghi",
+				"/jkl",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] == "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if strings.Join(parts[1:3], " ") == templ {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaRegExp1: set -l DiskQuota=.*=10G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaRegExp1(c *check.C) {
+	test := struct {
+		cname string
+		label string
+	}{
+		cname: "TestLabelDiskQuotaRegExp1",
+		label: "-l DiskQuota=.*=10G",
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+
+	cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+	ret := command.PouchRun(strings.Fields(cmd)...)
+	ret.Assert(c, icmd.Success)
+	defer command.PouchRun("rm", "-vf", test.cname)
+
+	// check df output
+	output := ret.Stdout()
+	fmt.Printf("%s\n\n", output)
+
+	// check different mount point
+	for _, line := range strings.Split(output, "\n") {
+		for _, mountpoint := range []string{
+			"overlay",
+			"/abc",
+			"/def",
+			"/ghi",
+			"/jkl",
+		} {
+			if strings.Contains(line, mountpoint) {
+				parts := strings.Fields(line)
+				if len(parts) != 6 {
+					c.Fatalf("invalid format: %s", line)
+				}
+
+				if parts[1] != "10485760" {
+					c.Fatalf("failed to set disk quota: %s", line)
+				}
+			}
+		}
+	}
+
+	// check QuotaID is nil
+	ret = command.PouchRun("inspect", "-f", "{{.Config.QuotaID}}", test.cname)
+	ret.Assert(c, icmd.Success)
+
+	output = ret.Stdout()
+	if strings.TrimSpace(output) != "" {
+		c.Fatalf("get QuotaID(%s), expect nil", output)
+	}
+}
+
+// TestLabelDiskQuotaRegExp2: set -l DiskQuota=.*=10G set -l QuotaId
+func (suite *PouchPluginSuite) TestLabelDiskQuotaRegExp2(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaRegExp2",
+			label: "-l DiskQuota=.*=10G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaRegExp3",
+			label: "-l DiskQuota=.*=10G -l AutoQuotaId=true -l QuotaId=16777750",
+		},
+		{
+			cname: "TestLabelDiskQuotaRegExp4",
+			label: "-l DiskQuota=.*=10G -l QuotaId=16777755",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		ret.Assert(c, icmd.Success)
+		defer command.PouchRun("rm", "-vf", test.cname)
+
+		// check df output
+		output := ret.Stdout()
+		fmt.Printf("%s\n\n", output)
+
+		templ := ""
+		// check same quota rootfs and /abc
+		for _, line := range strings.Split(output, "\n") {
+			for _, mountpoint := range []string{
+				"overlay",
+				"/abc",
+				"/def",
+				"/ghi",
+				"/jkl",
+			} {
+				if strings.Contains(line, mountpoint) {
+					parts := strings.Fields(line)
+					if len(parts) != 6 {
+						c.Fatalf("invalid format: %s", line)
+					}
+
+					if parts[1] != "10485760" {
+						c.Fatalf("failed to set disk quota: %s", line)
+					}
+
+					if templ == "" {
+						templ = strings.Join(parts[1:3], " ")
+					} else {
+						if strings.Join(parts[1:3], " ") != templ {
+							c.Fatalf("failed to set disk quota: %s", line)
+						}
+					}
+				}
+			}
+
+			// check QuotaID isn't nil
+			ret = command.PouchRun("inspect", "-f", "{{.Config.QuotaID}}", test.cname)
+			ret.Assert(c, icmd.Success)
+
+			output = ret.Stdout()
+			if output == "" {
+				c.Fatalf("get QuotaID(%s), expect nil", output)
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaMulti1: set -l DiskQuota=/abc=10G;.*=20G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaMulti1(c *check.C) {
+	test := struct {
+		cname string
+		label string
+	}{
+		cname: "TestLabelDiskQuotaMulti1",
+		label: "-l DiskQuota=/abc=10G;/def=11G;/ghi=12G;/jlk=13G;.*=20G",
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+
+	cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+	ret := command.PouchRun(strings.Fields(cmd)...)
+	ret.Assert(c, icmd.Success)
+	defer command.PouchRun("rm", "-vf", test.cname)
+
+	// check df output
+	output := ret.Stdout()
+	fmt.Printf("%s\n\n", output)
+
+	// check different mount point
+	for _, line := range strings.Split(output, "\n") {
+		for _, check := range []struct {
+			mp   string
+			size string
+		}{
+			{mp: "overlay", size: "20971520"},
+			{mp: "/abc", size: "10485760"},
+			{mp: "/def", size: "11534336"},
+			{mp: "/ghi", size: "12582912"},
+			{mp: "/jlk", size: "13631488"},
+		} {
+			if strings.Contains(line, check.mp) {
+				parts := strings.Fields(line)
+				if len(parts) != 6 {
+					c.Fatalf("invalid format: %s", line)
+				}
+
+				if parts[1] != check.size {
+					c.Fatalf("failed to set disk quota: %s", line)
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaMulti2: set -l DiskQuota=/&/abc=10G;.*=20G
+func (suite *PouchPluginSuite) TestLabelDiskQuotaMulti2(c *check.C) {
+	test := struct {
+		cname string
+		label string
+	}{
+		cname: "TestLabelDiskQuotaMulti2",
+		label: "-l DiskQuota=/&/abc=10G;.*=20G",
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+
+	cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+	ret := command.PouchRun(strings.Fields(cmd)...)
+	ret.Assert(c, icmd.Success)
+	defer command.PouchRun("rm", "-vf", test.cname)
+
+	// check df output
+	output := ret.Stdout()
+	fmt.Printf("%s\n\n", output)
+
+	// check different mount point
+	for _, line := range strings.Split(output, "\n") {
+		for _, check := range []struct {
+			mp   string
+			size string
+		}{
+			{mp: "overlay", size: "10485760"},
+			{mp: "/abc", size: "10485760"},
+			{mp: "/def", size: "20971520"},
+			{mp: "/ghi", size: "20971520"},
+			{mp: "/jlk", size: "20971520"},
+		} {
+			if strings.Contains(line, check.mp) {
+				parts := strings.Fields(line)
+				if len(parts) != 6 {
+					c.Fatalf("invalid format: %s", line)
+				}
+
+				if parts[1] != check.size {
+					c.Fatalf("failed to set disk quota: %s", line)
+				}
+			}
+		}
+	}
+}
+
+// TestLabelDiskQuotaInvalid: set invalid disk quota
+func (suite *PouchPluginSuite) TestLabelDiskQuotaInvalid(c *check.C) {
+	tests := []struct {
+		cname string
+		label string
+	}{
+		{
+			cname: "TestLabelDiskQuotaInvalid1",
+			label: "-l DiskQuota=/abc=10G;.*=20G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaInvalid2",
+			label: "-l DiskQuota=/&/abc&.*=10G",
+		},
+		{
+			cname: "TestLabelDiskQuotaInvalid3",
+			label: "-l DiskQuota=/&/abc=10G;/def&/ghi=20G -l AutoQuotaId=true",
+		},
+		{
+			cname: "TestLabelDiskQuotaInvalid4",
+			label: "-l DiskQuota=/&/abc&.*=10G;.*=20G",
+		},
+		{
+			cname: "TestLabelDiskQuotaInvalid5",
+			label: "-l DiskQuota=/&/abc=10G;.*=20G -l AutoQuotaId=true",
+		},
+	}
+
+	commonCmd := fmt.Sprintf("-v /abc -v /def -v /ghi -v /jlk %s df", busyboxImage)
+	for _, test := range tests {
+		cmd := fmt.Sprintf("run --name %s %s %s", test.cname, test.label, commonCmd)
+		ret := command.PouchRun(strings.Fields(cmd)...)
+		defer command.PouchRun("rm", "-vf", test.cname)
+		if ret.Error == nil {
+			c.Fatalf("failed to check invalid disk quota")
+		}
 	}
 }
