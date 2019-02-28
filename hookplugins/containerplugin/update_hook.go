@@ -31,12 +31,13 @@ func (c *contPlugin) PreUpdate(in io.ReadCloser) (io.ReadCloser, error) {
 
 	type UpdateConfigInternal struct {
 		types.Resources
-		RestartPolicy types.RestartPolicy
-		ImageID       string
-		Env           []string
-		Label         []string
-		DiskQuota     string
-		Network       string
+		RestartPolicy  types.RestartPolicy
+		ImageID        string
+		Env            []string
+		Label          []string
+		DiskQuota      string
+		Network        string
+		SpecAnnotation map[string]string
 	}
 
 	var updateConfigInternal UpdateConfigInternal
@@ -64,11 +65,12 @@ func (c *contPlugin) PreUpdate(in io.ReadCloser) (io.ReadCloser, error) {
 	}
 
 	updateConfig := types.UpdateConfig{
-		Resources:     updateConfigInternal.Resources,
-		DiskQuota:     diskQuota,
-		Env:           updateConfigInternal.Env,
-		Label:         updateConfigInternal.Label,
-		RestartPolicy: &updateConfigInternal.RestartPolicy,
+		Resources:      updateConfigInternal.Resources,
+		DiskQuota:      diskQuota,
+		Env:            updateConfigInternal.Env,
+		Label:          updateConfigInternal.Label,
+		RestartPolicy:  &updateConfigInternal.RestartPolicy,
+		SpecAnnotation: updateConfigInternal.SpecAnnotation,
 	}
 
 	// marshal it as stream and return to the caller
