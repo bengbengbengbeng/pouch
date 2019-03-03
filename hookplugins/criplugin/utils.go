@@ -23,8 +23,8 @@ func updateNetworkEnv(createConfig *apitypes.ContainerCreateConfig, meta *crityp
 	// TODO: only support ipv4
 	netNSPath := meta.NetNS
 
-	// skip kata container
-	if meta.Runtime == "kata-runtime" {
+	// skip kata container and nanovisor
+	if meta.Runtime == "kata-runtime" || meta.Runtime == "runsc" {
 		return nil
 	}
 
