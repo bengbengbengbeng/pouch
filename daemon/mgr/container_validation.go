@@ -108,10 +108,6 @@ func (mgr *ContainerManager) validateDiskQuota(config *types.ContainerCreateConf
 	}
 
 	quotaMaps := config.DiskQuota
-	if len(quotaMaps) > 1 && quota.IsSetQuotaID(config.QuotaID) {
-		return errors.Wrap(errInvalidDiskQuota, `QuotaID only used to set one disk quota, `+
-			`such as: "/=10G" or "/path1=10G" or ".*=10G"`)
-	}
 
 	for key := range quotaMaps {
 		if key == "" {
