@@ -802,7 +802,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaRootFS(c *check.C) {
 
 		// check df output
 		output := ret.Stdout()
-		fmt.Printf("%s\n\n", output)
 
 		templ := ""
 		// check root fs
@@ -885,7 +884,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaMountPoint(c *check.C) {
 
 		// check df output
 		output := ret.Stdout()
-		fmt.Printf("%s\n\n", output)
 
 		templ := ""
 		// check mount point /abc
@@ -968,7 +966,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaAddOperate(c *check.C) {
 
 		// check df output
 		output := ret.Stdout()
-		fmt.Printf("%s\n\n", output)
 
 		templ := ""
 		// check same quota rootfs and /abc
@@ -1047,7 +1044,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaRegExp1(c *check.C) {
 
 	// check df output
 	output := ret.Stdout()
-	fmt.Printf("%s\n\n", output)
 
 	// check different mount point
 	for _, line := range strings.Split(output, "\n") {
@@ -1110,7 +1106,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaRegExp2(c *check.C) {
 
 		// check df output
 		output := ret.Stdout()
-		fmt.Printf("%s\n\n", output)
 
 		templ := ""
 		// check same quota rootfs and /abc
@@ -1173,7 +1168,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaMulti1(c *check.C) {
 
 	// check df output
 	output := ret.Stdout()
-	fmt.Printf("%s\n\n", output)
 
 	// check different mount point
 	for _, line := range strings.Split(output, "\n") {
@@ -1220,7 +1214,6 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaMulti2(c *check.C) {
 
 	// check df output
 	output := ret.Stdout()
-	fmt.Printf("%s\n\n", output)
 
 	// check different mount point
 	for _, line := range strings.Split(output, "\n") {
@@ -1255,24 +1248,12 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaInvalid(c *check.C) {
 		label string
 	}{
 		{
-			cname: "TestLabelDiskQuotaInvalid1",
-			label: "-l DiskQuota=/abc=10G;.*=20G -l AutoQuotaId=true",
-		},
-		{
 			cname: "TestLabelDiskQuotaInvalid2",
 			label: "-l DiskQuota=/&/abc&.*=10G",
 		},
 		{
-			cname: "TestLabelDiskQuotaInvalid3",
-			label: "-l DiskQuota=/&/abc=10G;/def&/ghi=20G -l AutoQuotaId=true",
-		},
-		{
 			cname: "TestLabelDiskQuotaInvalid4",
 			label: "-l DiskQuota=/&/abc&.*=10G;.*=20G",
-		},
-		{
-			cname: "TestLabelDiskQuotaInvalid5",
-			label: "-l DiskQuota=/&/abc=10G;.*=20G -l AutoQuotaId=true",
 		},
 	}
 
