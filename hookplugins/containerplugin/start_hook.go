@@ -38,6 +38,12 @@ func (c *contPlugin) PreStart(config interface{}) ([]int, [][]string, error) {
 		}
 	}
 
+	// if cpushare preload set, add prestart hook prestart_cpushare_preload
+	if isCpusharePreload(container.Config) {
+		retPriority = append(retPriority, -101)
+		retHookPaths = append(retHookPaths, []string{"/opt/ali-iaas/pouch/bin/prestart_hook_alipay", "CpusharePreload"})
+	}
+
 	return retPriority, retHookPaths, nil
 }
 

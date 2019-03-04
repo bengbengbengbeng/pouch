@@ -411,7 +411,7 @@ func (suite *PouchPluginSuite) TestEnvAliJvmCgroup(c *check.C) {
 
 // isSetCopyPodHostsHook is to check container whether to set copyPodHostsPrestartHook
 func isSetCopyPodHostsHook(rootDir string, cid string) (bool, error) {
-	copyPodHostsHookPath := "/opt/ali-iaas/pouch/bin/prestart_hook_cp"
+	copyPodHostsHookPath := "/opt/ali-iaas/pouch/bin/prestart_hook_alipay"
 	configFile := filepath.Join(rootDir, "containerd/state/io.containerd.runtime.v1.linux/default", cid, "config.json")
 	f, err := os.Open(configFile)
 	if err != nil {
@@ -1284,5 +1284,18 @@ func (suite *PouchPluginSuite) TestLabelDiskQuotaInvalid(c *check.C) {
 		if ret.Error == nil {
 			c.Fatalf("failed to check invalid disk quota")
 		}
+	}
+}
+
+// TestCpusharePreloadHook tests cpushare preload prestart hook
+func (suite *PouchPluginSuite) TestCpusharePreloadHook(c *check.C) {
+	cname := "TestCpusharePreloadHook"
+	command.PouchRun("run", "-d", "--net=none", "-e", "ALIPAY_SIGMA_CPUMODE=cpushare", "--name", cname, alios7u).Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, cname)
+
+	output := command.PouchRun("exec", cname, "cat", "/etc/ld.so.preload").Stdout()
+	expectedString := "/lib/libsysconf-alipay.so"
+	if !strings.Contains(output, expectedString) {
+		c.Errorf("%s should containers %s", output, expectedString)
 	}
 }
