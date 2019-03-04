@@ -182,105 +182,13 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 			config.ContainerConfig.SpecAnnotation = make(map[string]string)
 		}
 		specAnnotation := config.ContainerConfig.SpecAnnotation
+		if specAnnotation == nil {
+			specAnnotation = make(map[string]string)
+		}
 
 		resourceWrapper := configWrapper.HostConfig.ResourcesWrapper
 
-		// set cpu cgroup, cpu/cpuset.trick_cpus, cpu/cpu.bvt_warp_ns, cpuacct.sche_lat_switch
-		if resourceWrapper.CpusetTrickCpus != "" {
-			specAnnotation[hp.SpecCpusetTrickCpus] = resourceWrapper.CpusetTrickCpus
-		}
-		if resourceWrapper.CpusetTrickTasks != "" {
-			specAnnotation[hp.SpecCpusetTrickTasks] = resourceWrapper.CpusetTrickTasks
-		}
-		if resourceWrapper.CpusetTrickExemptTasks != "" {
-			specAnnotation[hp.SpecCpusetTrickExemptTasks] = resourceWrapper.CpusetTrickExemptTasks
-		}
-		if resourceWrapper.CPUBvtWarpNs != 0 {
-			specAnnotation[hp.SpecCPUBvtWarpNs] = strconv.FormatInt(resourceWrapper.CPUBvtWarpNs, 10)
-		}
-		if resourceWrapper.ScheLatSwitch != 0 {
-			specAnnotation[hp.SpecCpuacctSchedLatSwitch] = strconv.FormatInt(resourceWrapper.ScheLatSwitch, 10)
-		}
-
-		// set memory cgroup
-		if resourceWrapper.MemoryWmarkRatio != 0 {
-			specAnnotation[hp.SpecMemoryWmarkRatio] = strconv.Itoa(resourceWrapper.MemoryWmarkRatio)
-		}
-		if resourceWrapper.MemoryExtra != 0 {
-			specAnnotation[hp.SpecMemoryExtraInBytes] = strconv.FormatInt(resourceWrapper.MemoryExtra, 10)
-		}
-		if resourceWrapper.MemoryForceEmptyCtl != 0 {
-			specAnnotation[hp.SpecMemoryForceEmptyCtl] = strconv.Itoa(resourceWrapper.MemoryForceEmptyCtl)
-		}
-		if resourceWrapper.MemoryPriority != nil && *resourceWrapper.MemoryPriority != 0 {
-			specAnnotation[hp.SpecMemoryPriority] = strconv.Itoa(*resourceWrapper.MemoryPriority)
-		}
-		if resourceWrapper.MemoryUsePriorityOOM != nil && *resourceWrapper.MemoryUsePriorityOOM != 0 {
-			specAnnotation[hp.SpecMemoryUsePriorityOOM] = strconv.Itoa(*resourceWrapper.MemoryUsePriorityOOM)
-		}
-		if resourceWrapper.MemoryKillAll != nil && *resourceWrapper.MemoryKillAll != 0 {
-			specAnnotation[hp.SpecMemoryOOMKillAll] = strconv.Itoa(*resourceWrapper.MemoryKillAll)
-		}
-		if resourceWrapper.MemoryDroppable != 0 {
-			specAnnotation[hp.SpecMemoryDroppable] = strconv.Itoa(resourceWrapper.MemoryDroppable)
-		}
-
-		// set intel rdt
-		if resourceWrapper.IntelRdtL3Cbm != "" {
-			specAnnotation[hp.SpecIntelRdtL3Cbm] = resourceWrapper.IntelRdtL3Cbm
-		}
-		if resourceWrapper.IntelRdtGroup != "" {
-			specAnnotation[hp.SpecIntelRdtGroup] = resourceWrapper.IntelRdtGroup
-		}
-		if resourceWrapper.IntelRdtMba != "" {
-			specAnnotation[hp.SpecIntelRdtMba] = resourceWrapper.IntelRdtMba
-		}
-
-		// set blkio cgroup
-		if resourceWrapper.BlkFileLevelSwitch != 0 {
-			specAnnotation[hp.SpecBlkioFileLevelSwitch] = strconv.Itoa(resourceWrapper.BlkFileLevelSwitch)
-		}
-		if resourceWrapper.BlkBufferWriteBps != 0 {
-			specAnnotation[hp.SpecBlkioBufferWriteBps] = strconv.Itoa(resourceWrapper.BlkBufferWriteBps)
-		}
-		if resourceWrapper.BlkMetaWriteTps != 0 {
-			specAnnotation[hp.SpecBlkioMetaWriteTps] = strconv.Itoa(resourceWrapper.BlkMetaWriteTps)
-		}
-		if len(resourceWrapper.BlkFileThrottlePath) != 0 {
-			specAnnotation[hp.SpecBlkioFileThrottlePath] = strings.Join(resourceWrapper.BlkFileThrottlePath, " ")
-		}
-		if resourceWrapper.BlkBufferWriteSwitch != 0 {
-			specAnnotation[hp.SpecBlkioBufferWriteSwitch] = strconv.Itoa(resourceWrapper.BlkBufferWriteSwitch)
-		}
-		if len(resourceWrapper.BlkDeviceBufferWriteBps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceBufferWriteBps] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceBufferWriteBps)
-		}
-		if len(resourceWrapper.BlkDeviceIdleTime) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceIdleTime] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceIdleTime)
-		}
-		if len(resourceWrapper.BlkDeviceLatencyTarget) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceLatencyTarget] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceLatencyTarget)
-		}
-		if len(resourceWrapper.BlkioDeviceReadLowBps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceReadLowBps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceReadLowBps)
-		}
-		if len(resourceWrapper.BlkioDeviceReadLowIOps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceReadLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceReadLowIOps)
-		}
-		if len(resourceWrapper.BlkioDeviceWriteLowBps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceWriteLowBps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowBps)
-		}
-		if len(resourceWrapper.BlkioDeviceWriteLowIOps) != 0 {
-			specAnnotation[hp.SpecBlkioDeviceWriteLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowIOps)
-		}
-
-		// set net cgroup
-		if resourceWrapper.NetCgroupRate != "" {
-			specAnnotation[hp.SpecNetCgroupRate] = resourceWrapper.NetCgroupRate
-		}
-		if resourceWrapper.NetCgroupCeil != "" {
-			specAnnotation[hp.SpecNetCgroupCeil] = resourceWrapper.NetCgroupCeil
-		}
+		convertResourceWrapToAnnotation(&resourceWrapper, specAnnotation)
 
 		config.ContainerConfig.SpecAnnotation = specAnnotation
 
@@ -294,6 +202,105 @@ func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 		req.Body = ioutil.NopCloser(&out)
 
 		return h(ctx, rw, req)
+	}
+}
+
+func convertResourceWrapToAnnotation(resourceWrapper *ResourcesWrapper, specAnnotation map[string]string) {
+	// set cpu cgroup, cpu/cpuset.trick_cpus, cpu/cpu.bvt_warp_ns, cpuacct.sche_lat_switch
+	if resourceWrapper.CpusetTrickCpus != "" {
+		specAnnotation[hp.SpecCpusetTrickCpus] = resourceWrapper.CpusetTrickCpus
+	}
+	if resourceWrapper.CpusetTrickTasks != "" {
+		specAnnotation[hp.SpecCpusetTrickTasks] = resourceWrapper.CpusetTrickTasks
+	}
+	if resourceWrapper.CpusetTrickExemptTasks != "" {
+		specAnnotation[hp.SpecCpusetTrickExemptTasks] = resourceWrapper.CpusetTrickExemptTasks
+	}
+	if resourceWrapper.CPUBvtWarpNs != 0 {
+		specAnnotation[hp.SpecCPUBvtWarpNs] = strconv.FormatInt(resourceWrapper.CPUBvtWarpNs, 10)
+	}
+	if resourceWrapper.ScheLatSwitch != 0 {
+		specAnnotation[hp.SpecCpuacctSchedLatSwitch] = strconv.FormatInt(resourceWrapper.ScheLatSwitch, 10)
+	}
+
+	// set memory cgroup
+	if resourceWrapper.MemoryWmarkRatio != 0 {
+		specAnnotation[hp.SpecMemoryWmarkRatio] = strconv.Itoa(resourceWrapper.MemoryWmarkRatio)
+	}
+	if resourceWrapper.MemoryExtra != 0 {
+		specAnnotation[hp.SpecMemoryExtraInBytes] = strconv.FormatInt(resourceWrapper.MemoryExtra, 10)
+	}
+	if resourceWrapper.MemoryForceEmptyCtl != 0 {
+		specAnnotation[hp.SpecMemoryForceEmptyCtl] = strconv.Itoa(resourceWrapper.MemoryForceEmptyCtl)
+	}
+	if resourceWrapper.MemoryPriority != nil && *resourceWrapper.MemoryPriority != 0 {
+		specAnnotation[hp.SpecMemoryPriority] = strconv.Itoa(*resourceWrapper.MemoryPriority)
+	}
+	if resourceWrapper.MemoryUsePriorityOOM != nil && *resourceWrapper.MemoryUsePriorityOOM != 0 {
+		specAnnotation[hp.SpecMemoryUsePriorityOOM] = strconv.Itoa(*resourceWrapper.MemoryUsePriorityOOM)
+	}
+	if resourceWrapper.MemoryKillAll != nil && *resourceWrapper.MemoryKillAll != 0 {
+		specAnnotation[hp.SpecMemoryOOMKillAll] = strconv.Itoa(*resourceWrapper.MemoryKillAll)
+	}
+	if resourceWrapper.MemoryDroppable != 0 {
+		specAnnotation[hp.SpecMemoryDroppable] = strconv.Itoa(resourceWrapper.MemoryDroppable)
+	}
+
+	// set intel rdt
+	if resourceWrapper.IntelRdtL3Cbm != "" {
+		specAnnotation[hp.SpecIntelRdtL3Cbm] = resourceWrapper.IntelRdtL3Cbm
+	}
+	if resourceWrapper.IntelRdtGroup != "" {
+		specAnnotation[hp.SpecIntelRdtGroup] = resourceWrapper.IntelRdtGroup
+	}
+	if resourceWrapper.IntelRdtMba != "" {
+		specAnnotation[hp.SpecIntelRdtMba] = resourceWrapper.IntelRdtMba
+	}
+
+	// set blkio cgroup
+	if resourceWrapper.BlkFileLevelSwitch != 0 {
+		specAnnotation[hp.SpecBlkioFileLevelSwitch] = strconv.Itoa(resourceWrapper.BlkFileLevelSwitch)
+	}
+	if resourceWrapper.BlkBufferWriteBps != 0 {
+		specAnnotation[hp.SpecBlkioBufferWriteBps] = strconv.Itoa(resourceWrapper.BlkBufferWriteBps)
+	}
+	if resourceWrapper.BlkMetaWriteTps != 0 {
+		specAnnotation[hp.SpecBlkioMetaWriteTps] = strconv.Itoa(resourceWrapper.BlkMetaWriteTps)
+	}
+	if len(resourceWrapper.BlkFileThrottlePath) != 0 {
+		specAnnotation[hp.SpecBlkioFileThrottlePath] = strings.Join(resourceWrapper.BlkFileThrottlePath, " ")
+	}
+	if resourceWrapper.BlkBufferWriteSwitch != 0 {
+		specAnnotation[hp.SpecBlkioBufferWriteSwitch] = strconv.Itoa(resourceWrapper.BlkBufferWriteSwitch)
+	}
+	if len(resourceWrapper.BlkDeviceBufferWriteBps) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceBufferWriteBps] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceBufferWriteBps)
+	}
+	if len(resourceWrapper.BlkDeviceIdleTime) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceIdleTime] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceIdleTime)
+	}
+	if len(resourceWrapper.BlkDeviceLatencyTarget) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceLatencyTarget] = sliceThrottleDeviceString(resourceWrapper.BlkDeviceLatencyTarget)
+	}
+	if len(resourceWrapper.BlkioDeviceReadLowBps) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceReadLowBps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceReadLowBps)
+	}
+	if len(resourceWrapper.BlkioDeviceReadLowIOps) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceReadLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceReadLowIOps)
+	}
+	if len(resourceWrapper.BlkioDeviceWriteLowBps) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceWriteLowBps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowBps)
+	}
+	if len(resourceWrapper.BlkioDeviceWriteLowIOps) != 0 {
+		specAnnotation[hp.SpecBlkioDeviceWriteLowIOps] = sliceThrottleDeviceString(resourceWrapper.BlkioDeviceWriteLowIOps)
+	}
+
+	// set net cgroup
+	if resourceWrapper.NetCgroupRate != "" {
+		specAnnotation[hp.SpecNetCgroupRate] = resourceWrapper.NetCgroupRate
+	}
+	if resourceWrapper.NetCgroupCeil != "" {
+		specAnnotation[hp.SpecNetCgroupCeil] = resourceWrapper.NetCgroupCeil
 	}
 }
 
@@ -372,4 +379,53 @@ func convertAnnotationToDockerHostConfig(specAnnotation map[string]string, resou
 	}
 
 	return nil
+}
+
+// UpdateConfigWrapper defines the alidocker's UpdateConfig
+type UpdateConfigWrapper struct {
+	ResourcesWrapper
+}
+
+func containerUpdateWrapper(h serverTypes.Handler) serverTypes.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		if !utils.IsStale(ctx, req) {
+			return h(ctx, rw, req)
+		}
+
+		buffer, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return err
+		}
+
+		// decode container config by alidocker-1.12.6 struct
+		configWrapper := &UpdateConfigWrapper{}
+		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(configWrapper); err != nil {
+			return httputils.NewHTTPError(err, http.StatusBadRequest)
+		}
+
+		config := &types.UpdateConfig{}
+		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(config); err != nil {
+			return httputils.NewHTTPError(err, http.StatusBadRequest)
+		}
+
+		specAnnotation := config.SpecAnnotation
+		if specAnnotation == nil {
+			specAnnotation = make(map[string]string)
+		}
+
+		convertResourceWrapToAnnotation(&configWrapper.ResourcesWrapper, specAnnotation)
+
+		config.SpecAnnotation = specAnnotation
+
+		// marshal it as stream and return to the caller
+		var out bytes.Buffer
+		if err := json.NewEncoder(&out).Encode(config); err != nil {
+			return err
+		}
+		logrus.Infof("after process update container body is %s", string(out.Bytes()))
+
+		req.Body = ioutil.NopCloser(&out)
+
+		return h(ctx, rw, req)
+	}
 }
