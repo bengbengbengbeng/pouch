@@ -1205,6 +1205,21 @@ func (mgr *ContainerManager) Update(ctx context.Context, name string, config *ty
 	// resources will be updated when the container is started again,
 	// If container is running, we need to update configs to the real world.
 	if c.IsRunning() {
+		c.Lock()
+		err = createUpdateSpec(c.ID, config.SpecAnnotation)
+		c.Unlock()
+
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			er := clearUpdateSpec(c.ID)
+			if er != nil {
+				logrus.Warnf("failed to clear container %s update spec file: %v", c.ID, er)
+			}
+		}()
+
 		if err := mgr.Client.UpdateResources(ctx, c.ID, c.HostConfig.Resources); err != nil {
 			restore = true
 			return fmt.Errorf("failed to update resource: %s", err)
