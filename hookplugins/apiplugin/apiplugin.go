@@ -49,6 +49,8 @@ func updateHandlerSpec(spec *types.HandlerSpec) (removed bool) {
 		spec.HandlerFunc = getVersionHandler(spec.HandlerFunc)
 	case "/containers/create":
 		spec.HandlerFunc = containerCreateWrapper(spec.HandlerFunc)
+	case "/containers/{name:.*}/json":
+		spec.HandlerFunc = containerInspectWrapper(spec.HandlerFunc)
 	}
 
 	return false
