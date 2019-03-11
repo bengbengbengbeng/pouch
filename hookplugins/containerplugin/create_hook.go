@@ -272,6 +272,13 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		return errors.Wrap(err, "failed to validate spec annotation")
 	}
 
+	// set snapshotter to support multiple snapshotter
+	// now, only for edas, if runtime is runc and snapshotter
+	// is qcow2, set snapshotter to overlayfs
+	if createConfig.HostConfig.Runtime == "runc" &&
+		createConfig.Snapshotter == "qcow2" {
+		createConfig.Snapshotter = "overlayfs"
+	}
 	return nil
 }
 

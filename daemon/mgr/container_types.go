@@ -35,6 +35,9 @@ var (
 
 	// ProfileUnconfined means run a container without the default seccomp profile.
 	ProfileUnconfined = "unconfined"
+
+	// qcow2Size is used for set quota for container use qcow2 graphdriver
+	qcow2Size = "qcow2.size"
 )
 
 var (
