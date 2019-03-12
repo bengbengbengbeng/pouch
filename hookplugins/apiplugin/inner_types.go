@@ -316,26 +316,11 @@ type InnerResources struct {
 	// Maximum IOps for the container system drive (Windows only)
 	IOMaximumIOps uint64 `json:"IOMaximumIOps"`
 
-	// IntelRdtL3Cbm specifies settings for Intel RDT/CAT group that the container is placed into to limit the resources (e.g., L3 cache) the container has available.
-	IntelRdtL3Cbm string `json:"IntelRdtL3Cbm"`
-
 	// Kernel memory limit in bytes.
 	KernelMemory int64 `json:"KernelMemory"`
 
 	// Memory limit in bytes.
 	Memory int64 `json:"Memory"`
-
-	// MemoryExtra is an integer value representing this container's memory high water mark percentage.
-	// The range is in [0, 100].
-	//
-	// Maximum: 100
-	// Minimum: 0
-	MemoryExtra *int64 `json:"MemoryExtra"`
-
-	// MemoryForceEmptyCtl represents whether to reclaim the page cache when deleting cgroup.
-	// Maximum: 1
-	// Minimum: 0
-	MemoryForceEmptyCtl int64 `json:"MemoryForceEmptyCtl"`
 
 	// Memory soft limit in bytes.
 	MemoryReservation int64 `json:"MemoryReservation"`
@@ -347,13 +332,6 @@ type InnerResources struct {
 	// Maximum: 100
 	// Minimum: -1
 	MemorySwappiness *int64 `json:"MemorySwappiness"`
-
-	// MemoryWmarkRatio is an integer value representing this container's memory low water mark percentage.
-	// The value of memory low water mark is memory.limit_in_bytes * MemoryWmarkRatio. The range is in [0, 100].
-	//
-	// Maximum: 100
-	// Minimum: 0
-	MemoryWmarkRatio *int64 `json:"MemoryWmarkRatio"`
 
 	// CPU quota in units of 10<sup>-9</sup> CPUs.
 	NanoCpus int64 `json:"NanoCpus"`
@@ -367,11 +345,6 @@ type InnerResources struct {
 	// Tune a container's pids limit. Set -1 for unlimited. Only on Linux 4.4 does this parameter support.
 	//
 	PidsLimit int64 `json:"PidsLimit"`
-
-	// ScheLatSwitch enables scheduler latency count in cpuacct
-	// Maximum: 1
-	// Minimum: 0
-	ScheLatSwitch int64 `json:"ScheLatSwitch"`
 
 	// A list of resource limits to set in the container. For example: `{"Name": "nofile", "Soft": 1024, "Hard": 2048}`"
 	//

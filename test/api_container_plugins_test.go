@@ -146,6 +146,7 @@ func validateThrottleDevice(src, dst []*types.ThrottleDevice, c *check.C) {
 	}
 }
 
+// TestContainerCreateAndInspect tests for alidocker container create and inspect api
 func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C) {
 	cname := "api_plugin_container_create_test"
 
@@ -168,12 +169,12 @@ func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C)
 
 		createConfig.HostConfig.Memory = 2 * 1024 * 1024 * 1024
 
-		memoryWmarkRatio := int64(50)
-		createConfig.HostConfig.MemoryWmarkRatio = &memoryWmarkRatio
+		memoryWmarkRatio := int(50)
+		createConfig.HostConfig.MemoryWmarkRatio = memoryWmarkRatio
 
 		memoryExtra := int64(90)
-		createConfig.HostConfig.MemoryExtra = &memoryExtra
-		createConfig.HostConfig.MemoryForceEmptyCtl = int64(1)
+		createConfig.HostConfig.MemoryExtra = memoryExtra
+		createConfig.HostConfig.MemoryForceEmptyCtl = int(1)
 		memoryPriority := 10
 		createConfig.HostConfig.MemoryPriority = &memoryPriority
 		memoryUsePriorityOOM := 1
@@ -230,9 +231,9 @@ func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C)
 	c.Assert(inspectJSON.HostConfig.ScheLatSwitch, check.Equals, int64(1))
 
 	c.Assert(inspectJSON.HostConfig.Memory, check.Equals, int64(2*1024*1024*1024))
-	c.Assert(*inspectJSON.HostConfig.MemoryWmarkRatio, check.Equals, int64(50))
-	c.Assert(*inspectJSON.HostConfig.MemoryExtra, check.Equals, int64(90))
-	c.Assert(inspectJSON.HostConfig.MemoryForceEmptyCtl, check.Equals, int64(1))
+	c.Assert(inspectJSON.HostConfig.MemoryWmarkRatio, check.Equals, int(50))
+	c.Assert(inspectJSON.HostConfig.MemoryExtra, check.Equals, int64(90))
+	c.Assert(inspectJSON.HostConfig.MemoryForceEmptyCtl, check.Equals, int(1))
 	c.Assert(*inspectJSON.HostConfig.MemoryPriority, check.Equals, 10)
 	c.Assert(*inspectJSON.HostConfig.MemoryUsePriorityOOM, check.Equals, 1)
 	c.Assert(inspectJSON.HostConfig.MemoryDroppable, check.Equals, 1)
@@ -254,4 +255,162 @@ func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C)
 	c.Assert(inspectJSON.HostConfig.IntelRdtL3Cbm, check.Equals, "L3:0=fffff;1=1ff")
 	c.Assert(inspectJSON.HostConfig.IntelRdtMba, check.Equals, "MB:0=100;1=100")
 	c.Assert(inspectJSON.HostConfig.IntelRdtGroup, check.Equals, "ff11")
+}
+
+// DockerContainerUpdateConfig is the parameter set to ContainerUpdate api
+type DockerContainerUpdateConfig struct {
+	apiplugin.ResourcesWrapper
+}
+
+// TestContainerUpdateForApiPlugin tests for alidocker container update api
+func (suite *APIContainerPluginsSuite) TestContainerUpdateForApiPlugin(c *check.C) {
+	cname := "api_plugin_container_update_test"
+
+	createConfig := &DockerContainerCreateConfig{
+		ContainerConfig: types.ContainerConfig{
+			Image: alios7u,
+		},
+		HostConfig: &apiplugin.InnerHostConfig{
+			NetworkMode: "none",
+		},
+	}
+
+	{
+		createConfig.HostConfig.CpusetCpus = "1,2"
+		createConfig.HostConfig.CpusetTrickCpus = "1,2"
+		createConfig.HostConfig.CpusetTrickTasks = "nginx"
+		createConfig.HostConfig.CpusetTrickExemptTasks = "top"
+		createConfig.HostConfig.CPUBvtWarpNs = int64(1000)
+		createConfig.HostConfig.ScheLatSwitch = int64(1)
+
+		createConfig.HostConfig.Memory = 2 * 1024 * 1024 * 1024
+
+		memoryWmarkRatio := int(50)
+		createConfig.HostConfig.MemoryWmarkRatio = memoryWmarkRatio
+
+		memoryExtra := int64(90)
+		createConfig.HostConfig.MemoryExtra = memoryExtra
+		createConfig.HostConfig.MemoryForceEmptyCtl = int(1)
+		memoryPriority := 10
+		createConfig.HostConfig.MemoryPriority = &memoryPriority
+		memoryUsePriorityOOM := 1
+		createConfig.HostConfig.MemoryUsePriorityOOM = &memoryUsePriorityOOM
+		createConfig.HostConfig.MemoryDroppable = 1
+		memoryKillAll := 1
+		createConfig.HostConfig.MemoryKillAll = &memoryKillAll
+
+		createConfig.HostConfig.BlkBufferWriteSwitch = 1
+		createConfig.HostConfig.BlkBufferWriteBps = 100000
+		createConfig.HostConfig.BlkMetaWriteTps = 1000
+		createConfig.HostConfig.BlkFileLevelSwitch = 1
+		createConfig.HostConfig.BlkFileThrottlePath = []string{"/tmp"}
+		createConfig.HostConfig.BlkioDeviceReadLowIOps = createThrottleDevice(1001)
+		createConfig.HostConfig.BlkioDeviceReadLowBps = createThrottleDevice(1002)
+		createConfig.HostConfig.BlkioDeviceWriteLowBps = createThrottleDevice(1003)
+		createConfig.HostConfig.BlkioDeviceWriteLowIOps = createThrottleDevice(1004)
+		createConfig.HostConfig.BlkDeviceBufferWriteBps = createThrottleDevice(1005)
+		createConfig.HostConfig.BlkDeviceIdleTime = createThrottleDevice(1006)
+		createConfig.HostConfig.BlkDeviceLatencyTarget = createThrottleDevice(1007)
+
+		createConfig.HostConfig.IntelRdtL3Cbm = "L3:0=fffff;1=1ff"
+		createConfig.HostConfig.IntelRdtMba = "MB:0=100;1=100"
+		createConfig.HostConfig.IntelRdtGroup = "ff11"
+	}
+
+	body := request.WithJSONBody(createConfig)
+	header := request.WithHeader("User-Agent", "Docker-Client")
+
+	query := make(url.Values)
+	query.Add("name", cname)
+	params := request.WithQuery(query)
+
+	resp, err := request.Post("/containers/create", body, header, params)
+	c.Assert(err, check.IsNil)
+	CheckRespStatus(c, resp, 201)
+
+	defer DelContainerForceMultyTime(c, cname)
+
+	updateConfig := &DockerContainerUpdateConfig{}
+
+	{
+		updateConfig.ResourcesWrapper.CpusetTrickCpus = "1"
+		updateConfig.ResourcesWrapper.CpusetTrickTasks = "top"
+		updateConfig.ResourcesWrapper.CpusetTrickExemptTasks = "nginx"
+		updateConfig.ResourcesWrapper.CPUBvtWarpNs = int64(2)
+		updateConfig.ResourcesWrapper.ScheLatSwitch = int64(1)
+
+		memoryWmarkRatio := int(80)
+		updateConfig.ResourcesWrapper.MemoryWmarkRatio = memoryWmarkRatio
+
+		updateConfig.ResourcesWrapper.MemoryExtra = int64(80)
+		memoryPriority := 9
+		updateConfig.ResourcesWrapper.MemoryPriority = &memoryPriority
+		// todo: memoryUsePriorityOOM could be set to 0 and MemoryKillAll could be set to 0?
+		// memoryUsePriorityOOM := 0
+		// updateConfig.ResourcesWrapper.MemoryUsePriorityOOM = &memoryUsePriorityOOM
+		// memoryKillAll := 0
+		// updateConfig.ResourcesWrapper.MemoryKillAll = &memoryKillAll
+
+		updateConfig.ResourcesWrapper.BlkBufferWriteBps = 200000
+		updateConfig.ResourcesWrapper.BlkMetaWriteTps = 2000
+		updateConfig.ResourcesWrapper.BlkFileThrottlePath = []string{"/home"}
+		updateConfig.ResourcesWrapper.BlkioDeviceReadLowIOps = createThrottleDevice(101)
+		updateConfig.ResourcesWrapper.BlkioDeviceReadLowBps = createThrottleDevice(102)
+		updateConfig.ResourcesWrapper.BlkioDeviceWriteLowBps = createThrottleDevice(103)
+		updateConfig.ResourcesWrapper.BlkioDeviceWriteLowIOps = createThrottleDevice(104)
+		updateConfig.ResourcesWrapper.BlkDeviceBufferWriteBps = createThrottleDevice(105)
+		updateConfig.ResourcesWrapper.BlkDeviceIdleTime = createThrottleDevice(106)
+		updateConfig.ResourcesWrapper.BlkDeviceLatencyTarget = createThrottleDevice(107)
+
+		updateConfig.ResourcesWrapper.IntelRdtL3Cbm = "L3:0=fffff;1=1fe"
+		updateConfig.ResourcesWrapper.IntelRdtMba = "MB:0=99;1=100"
+		updateConfig.ResourcesWrapper.IntelRdtGroup = "ff22"
+	}
+
+	updateBody := request.WithJSONBody(updateConfig)
+	resp, err = request.Post(fmt.Sprintf("/containers/%s/update", cname), updateBody, header)
+	c.Assert(err, check.IsNil)
+	CheckRespStatus(c, resp, 200)
+
+	resp, err = request.Get(fmt.Sprintf("/containers/%s/json", cname), header)
+	c.Assert(err, check.IsNil)
+	CheckRespStatus(c, resp, 200)
+
+	inspectJSON := &apiplugin.InnerContainerJSON{}
+	err = json.NewDecoder(resp.Body).Decode(inspectJSON)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(inspectJSON.HostConfig.NetworkMode, check.Equals, "none")
+	c.Assert(inspectJSON.HostConfig.CpusetCpus, check.Equals, "1,2")
+	c.Assert(inspectJSON.HostConfig.CpusetTrickCpus, check.Equals, "1")
+	c.Assert(inspectJSON.HostConfig.CpusetTrickTasks, check.Equals, "top")
+	c.Assert(inspectJSON.HostConfig.CpusetTrickExemptTasks, check.Equals, "nginx")
+	c.Assert(inspectJSON.HostConfig.CPUBvtWarpNs, check.Equals, int64(2))
+	c.Assert(inspectJSON.HostConfig.ScheLatSwitch, check.Equals, int64(1))
+
+	c.Assert(inspectJSON.HostConfig.Memory, check.Equals, int64(2*1024*1024*1024))
+	c.Assert(inspectJSON.HostConfig.MemoryWmarkRatio, check.Equals, int(80))
+	c.Assert(inspectJSON.HostConfig.MemoryExtra, check.Equals, int64(80))
+	c.Assert(inspectJSON.HostConfig.MemoryForceEmptyCtl, check.Equals, int(1))
+	c.Assert(*inspectJSON.HostConfig.MemoryPriority, check.Equals, 9)
+	c.Assert(*inspectJSON.HostConfig.MemoryUsePriorityOOM, check.Equals, 1)
+	c.Assert(inspectJSON.HostConfig.MemoryDroppable, check.Equals, 1)
+	c.Assert(*inspectJSON.HostConfig.MemoryKillAll, check.Equals, 1)
+
+	c.Assert(inspectJSON.HostConfig.BlkBufferWriteSwitch, check.Equals, 1)
+	c.Assert(inspectJSON.HostConfig.BlkBufferWriteBps, check.Equals, 200000)
+	c.Assert(inspectJSON.HostConfig.BlkMetaWriteTps, check.Equals, 2000)
+	c.Assert(inspectJSON.HostConfig.BlkFileLevelSwitch, check.Equals, 1)
+	c.Assert(inspectJSON.HostConfig.BlkFileThrottlePath, check.DeepEquals, []string{"/home"})
+	validateThrottleDevice(inspectJSON.HostConfig.BlkioDeviceReadLowIOps, createThrottleDevice(101), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkioDeviceReadLowBps, createThrottleDevice(102), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkioDeviceWriteLowBps, createThrottleDevice(103), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkioDeviceWriteLowIOps, createThrottleDevice(104), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkDeviceBufferWriteBps, createThrottleDevice(105), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkDeviceIdleTime, createThrottleDevice(106), c)
+	validateThrottleDevice(inspectJSON.HostConfig.BlkDeviceLatencyTarget, createThrottleDevice(107), c)
+
+	c.Assert(inspectJSON.HostConfig.IntelRdtL3Cbm, check.Equals, "L3:0=fffff;1=1fe")
+	c.Assert(inspectJSON.HostConfig.IntelRdtMba, check.Equals, "MB:0=99;1=100")
+	c.Assert(inspectJSON.HostConfig.IntelRdtGroup, check.Equals, "ff22")
 }
