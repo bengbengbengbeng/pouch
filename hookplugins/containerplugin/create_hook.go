@@ -243,33 +243,10 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		}
 	}
 
-	// add net-priority into spec-annotations
-	if createConfig.NetPriority != 0 {
-		if createConfig.SpecAnnotation == nil {
-			createConfig.SpecAnnotation = make(map[string]string)
-		}
-		createConfig.SpecAnnotation["net-priority"] = strconv.FormatInt(createConfig.NetPriority, 10)
-	}
-
-	// add annotations with prefix 'annotation.' into spec-annotations,
-	// for edas serverless.
-	for k, v := range createConfig.Labels {
-		if createConfig.SpecAnnotation == nil {
-			createConfig.SpecAnnotation = make(map[string]string)
-		}
-		if strings.HasPrefix(k, "annotation.") {
-			createConfig.SpecAnnotation[strings.TrimPrefix(k, "annotation.")] = v
-		}
-	}
-
 	// convert label pouch.SupportCgroup to env pouchSupportCgroup. Runc will clear cgroup readonly with this env
 	supportCgroup := createConfig.Labels["pouch.SupportCgroup"]
 	if supportCgroup == optionOn {
 		createConfig.Env = append(createConfig.Env, "pouchSupportCgroup=true")
-	}
-
-	if err := validateSpecAnnotation(createConfig); err != nil {
-		return errors.Wrap(err, "failed to validate spec annotation")
 	}
 
 	// set snapshotter to support multiple snapshotter
@@ -279,6 +256,34 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 		createConfig.Snapshotter == "qcow2" {
 		createConfig.Snapshotter = "overlayfs"
 	}
+
+	if createConfig.SpecAnnotation == nil {
+		createConfig.SpecAnnotation = make(map[string]string)
+	}
+	// add annotations with prefix 'annotation.' into spec-annotations,
+	// for edas serverless.
+	for k, v := range createConfig.Labels {
+		if strings.HasPrefix(k, "annotation.") {
+			createConfig.SpecAnnotation[strings.TrimPrefix(k, "annotation.")] = v
+		}
+	}
+
+	if err := validateSpecAnnotation(createConfig); err != nil {
+		return errors.Wrap(err, "failed to validate spec annotation")
+	}
+
+	// add net-priority into spec-annotations
+	// compatible with net-priority passed by --annotation customization.net_priority
+	// first use --annotation customization.net_priority, then --net-priority
+	if v, exist := createConfig.SpecAnnotation["customization.net_priority"]; exist {
+		if _, err := strconv.Atoi(v); err != nil {
+			return fmt.Errorf("customization.net_priority should be integer, actual %s", v)
+		}
+		createConfig.SpecAnnotation["net-priority"] = v
+	} else if createConfig.NetPriority != 0 {
+		createConfig.SpecAnnotation["net-priority"] = strconv.FormatInt(createConfig.NetPriority, 10)
+	}
+
 	return nil
 }
 
