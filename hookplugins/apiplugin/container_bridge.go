@@ -346,14 +346,10 @@ func convertAnnotationToDockerHostConfig(specAnnotation map[string]string, resou
 	rElem := reflect.ValueOf(resource).Elem()
 
 	for annotationKey, data := range specAnnotation {
-		if _, exist := hp.SupportAnnotation[annotationKey]; !exist {
-			return fmt.Errorf("Annotation not support key %s", annotationKey)
-		}
-
 		// get covertInfo by annotation key
 		info, exist := reflectMap[annotationKey]
 		if !exist {
-			return fmt.Errorf("Annotation not support key %s", annotationKey)
+			continue
 		}
 
 		// convert string to target value by covertFunc
