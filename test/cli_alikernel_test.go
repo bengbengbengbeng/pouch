@@ -121,3 +121,62 @@ func (suite *PouchAliKernelSuite) TestAliKernelCgroupNS(c *check.C) {
 		}
 	}
 }
+
+// TestUpdateNestCgroup tests update with nest cpu cgroup on alikernel should successful
+// which powered by runc
+func (suite *PouchAliKernelSuite) TestUpdateNestCpuCgroup(c *check.C) {
+	name := "TestUpdateNestCgroup-cpuset"
+	defer DelContainerForceMultyTime(c, name)
+
+	command.PouchRun("run", "--name", name, "-d", "--privileged", busyboxImage, "top").Assert(c, icmd.Success)
+	command.PouchRun("exec", name, "sh", "-c",
+		"mkdir -p /sys/fs/cgroup/cpuset/n1 && echo 1 > /sys/fs/cgroup/cpuset/n1/cpuset.cpus").Assert(c, icmd.Success)
+
+	// update cpu should successful
+	command.PouchRun("update", "--cpuset-cpus", "0", name).Assert(c, icmd.Success)
+	res := command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/cpuset/cpuset.cpus").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
+
+	// update memory should successful
+	command.PouchRun("update", "-m", "1g", name).Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/memory/memory.limit_in_bytes").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "1073741824"), check.IsNil)
+}
+
+// TestUpdateNestCgroup tests update with nest memory cgroup on alikernel should successful
+// which powered by runc
+func (suite *PouchAliKernelSuite) TestUpdateNestMemoryCgroup(c *check.C) {
+	name := "TestUpdateNestCgroup-memory"
+
+	command.PouchRun("run", "--name", name, "-d", "--privileged", busyboxImage, "top").Assert(c, icmd.Success)
+	command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/memory/nest").Assert(c, icmd.Success)
+
+	// update cpu should successful
+	command.PouchRun("update", "--cpuset-cpus", "0", name).Assert(c, icmd.Success)
+	res := command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/cpuset/cpuset.cpus").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
+
+	// update memory should successful
+	command.PouchRun("update", "-m", "1g", name).Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/memory/memory.limit_in_bytes").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "1073741824"), check.IsNil)
+}
+
+// TestUpdateNestCgroup tests update with nest device cgroup on alikernel should successful
+// which powered by runc
+func (suite *PouchAliKernelSuite) TestUpdateNestDeviceCgroup(c *check.C) {
+	name := "TestUpdateNestCgroup-device"
+
+	command.PouchRun("run", "--name", name, "-d", "--privileged", busyboxImage, "top").Assert(c, icmd.Success)
+	command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/devices/nest").Assert(c, icmd.Success)
+
+	// update cpu should successful
+	command.PouchRun("update", "--cpuset-cpus", "0", name).Assert(c, icmd.Success)
+	res := command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/cpuset/cpuset.cpus").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
+
+	// update memory should successful
+	command.PouchRun("update", "-m", "1g", name).Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/memory/memory.limit_in_bytes").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "1073741824"), check.IsNil)
+}
