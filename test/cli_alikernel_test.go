@@ -1,6 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/alibaba/pouch/test/command"
 	"github.com/alibaba/pouch/test/environment"
 	"github.com/alibaba/pouch/test/util"
@@ -147,6 +152,7 @@ func (suite *PouchAliKernelSuite) TestUpdateNestCpuCgroup(c *check.C) {
 // which powered by runc
 func (suite *PouchAliKernelSuite) TestUpdateNestMemoryCgroup(c *check.C) {
 	name := "TestUpdateNestCgroup-memory"
+	defer DelContainerForceMultyTime(c, name)
 
 	command.PouchRun("run", "--name", name, "-d", "--privileged", busyboxImage, "top").Assert(c, icmd.Success)
 	command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/memory/nest").Assert(c, icmd.Success)
@@ -166,6 +172,7 @@ func (suite *PouchAliKernelSuite) TestUpdateNestMemoryCgroup(c *check.C) {
 // which powered by runc
 func (suite *PouchAliKernelSuite) TestUpdateNestDeviceCgroup(c *check.C) {
 	name := "TestUpdateNestCgroup-device"
+	defer DelContainerForceMultyTime(c, name)
 
 	command.PouchRun("run", "--name", name, "-d", "--privileged", busyboxImage, "top").Assert(c, icmd.Success)
 	command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/devices/nest").Assert(c, icmd.Success)
@@ -179,4 +186,47 @@ func (suite *PouchAliKernelSuite) TestUpdateNestDeviceCgroup(c *check.C) {
 	command.PouchRun("update", "-m", "1g", name).Assert(c, icmd.Success)
 	res = command.PouchRun("exec", name, "cat", "/sys/fs/cgroup/memory/memory.limit_in_bytes").Assert(c, icmd.Success)
 	c.Assert(util.PartialEqual(res.Stdout(), "1073741824"), check.IsNil)
+}
+
+// TestContainerNS tests container ns is new created, should different from host
+func (suite *PouchAliKernelSuite) TestContainerNS(c *check.C) {
+	SkipIfFalse(c, func() bool {
+		if _, err := exec.LookPath("readlink"); err != nil {
+			return false
+		}
+		return true
+	})
+
+	name := "TestContainerNS"
+	defer DelContainerForceMultyTime(c, name)
+	command.PouchRun("run", "--name", name, "-d", busyboxImage, "top").Assert(c, icmd.Success)
+
+	pid := strings.TrimSpace(command.PouchRun("inspect", "-f", "{{.State.Pid}}", name).Stdout())
+	c.Assert(strings.TrimSpace(pid), check.Not(check.Equals), "0")
+
+	getNS := func(pid, ns string) (string, error) {
+		rawdata, err := exec.Command("readlink", "/proc/"+pid+"/ns/"+ns).Output()
+		out := string(rawdata)
+		if err != nil {
+			return "", err
+		}
+		if out == "" || !strings.Contains(out, ns) {
+			return "", fmt.Errorf("readlink get invalid: %s", out)
+		}
+
+		return out, nil
+	}
+
+	for _, ns := range []string{"cgroup", "ipc", "mnt", "net", "pid", "uts"} {
+		if _, err := os.Stat("/proc/1/ns/" + ns); err != nil {
+			c.Logf("no %s ns, skip", ns)
+			continue
+		}
+		cns, err := getNS(pid, ns)
+		c.Assert(err, check.IsNil)
+		hns, err := getNS("1", ns)
+		c.Assert(err, check.IsNil)
+
+		c.Assert(strings.TrimSpace(cns), check.Not(check.Equals), strings.TrimSpace(hns))
+	}
 }
