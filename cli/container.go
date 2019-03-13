@@ -66,6 +66,7 @@ type container struct {
 	ports          []string
 	expose         []string
 	publishAll     bool
+	macAddress     string
 	securityOpt    []string
 	capAdd         []string
 	capDrop        []string
@@ -209,6 +210,7 @@ func (c *container) config() (*types.ContainerCreateConfig, error) {
 			NetPriority:         c.netPriority,
 			SpecificID:          c.specificID,
 			Home:                c.homeDir,
+			MacAddress:          c.macAddress,
 		},
 
 		HostConfig: &types.HostConfig{
