@@ -13,7 +13,7 @@ import (
 func (suite *PouchCreateSuite) TestCreateWithHomeDir(c *check.C) {
 	homeDir := "/tmp/homedir/container"
 	os.RemoveAll(homeDir)
-	defer os.RemoveAll(homeDir)
+
 	name := "create-with-homedir"
 	res := command.PouchRun("create", "--name", name, "--home", homeDir, busyboxImage)
 	defer DelContainerForceMultyTime(c, name)

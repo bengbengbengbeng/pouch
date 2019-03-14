@@ -14,7 +14,6 @@ import (
 func (suite *APIContainerCreateSuite) TestCreateWithHomedir(c *check.C) {
 	homeDir := "/tmp/homedir/container"
 	os.RemoveAll(homeDir)
-	defer os.RemoveAll(homeDir)
 
 	cname := "TestCreateWithHomedir"
 	q := url.Values{}
