@@ -22,6 +22,7 @@ func init() {
 // SetUpTest does common setup in the beginning of each test.
 func (suite *APIImageListSuite) SetUpTest(c *check.C) {
 	SkipIfFalse(c, environment.IsLinux)
+	PullImage(c, busyboxImage)
 }
 
 // TestImageListOk tests listing images is OK.

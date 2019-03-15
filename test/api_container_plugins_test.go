@@ -10,6 +10,7 @@ import (
 
 	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/hookplugins/apiplugin"
+	"github.com/alibaba/pouch/pkg/utils"
 	"github.com/alibaba/pouch/test/environment"
 	"github.com/alibaba/pouch/test/request"
 
@@ -148,7 +149,7 @@ func validateThrottleDevice(src, dst []*types.ThrottleDevice, c *check.C) {
 
 // TestContainerCreateAndInspect tests for alidocker container create and inspect api
 func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C) {
-	cname := "api_plugin_container_create_test"
+	cname := "TestContainerCreateAndInspect"
 
 	createConfig := &DockerContainerCreateConfig{
 		ContainerConfig: types.ContainerConfig{
@@ -257,14 +258,9 @@ func (suite *APIContainerPluginsSuite) TestContainerCreateAndInspect(c *check.C)
 	c.Assert(inspectJSON.HostConfig.IntelRdtGroup, check.Equals, "ff11")
 }
 
-// DockerContainerUpdateConfig is the parameter set to ContainerUpdate api
-type DockerContainerUpdateConfig struct {
-	apiplugin.ResourcesWrapper
-}
-
 // TestContainerUpdateForApiPlugin tests for alidocker container update api
 func (suite *APIContainerPluginsSuite) TestContainerUpdateForApiPlugin(c *check.C) {
-	cname := "api_plugin_container_update_test"
+	cname := "TestContainerUpdateForApiPlugin"
 
 	createConfig := &DockerContainerCreateConfig{
 		ContainerConfig: types.ContainerConfig{
@@ -330,9 +326,14 @@ func (suite *APIContainerPluginsSuite) TestContainerUpdateForApiPlugin(c *check.
 
 	defer DelContainerForceMultyTime(c, cname)
 
-	updateConfig := &DockerContainerUpdateConfig{}
+	updateConfig := &apiplugin.UpdateConfigWrapper{}
 
 	{
+		updateConfig.DiskQuota = "5g"
+		updateConfig.RestartPolicy.Name = "always"
+		updateConfig.RestartPolicy.MaximumRetryCount = 3
+		updateConfig.Label = append(updateConfig.Label, "label1=aaa")
+		updateConfig.Env = append(updateConfig.Env, "env1=bbb")
 		updateConfig.ResourcesWrapper.CpusetTrickCpus = "1"
 		updateConfig.ResourcesWrapper.CpusetTrickTasks = "top"
 		updateConfig.ResourcesWrapper.CpusetTrickExemptTasks = "nginx"
@@ -413,4 +414,21 @@ func (suite *APIContainerPluginsSuite) TestContainerUpdateForApiPlugin(c *check.
 	c.Assert(inspectJSON.HostConfig.IntelRdtL3Cbm, check.Equals, "L3:0=fffff;1=1fe")
 	c.Assert(inspectJSON.HostConfig.IntelRdtMba, check.Equals, "MB:0=99;1=100")
 	c.Assert(inspectJSON.HostConfig.IntelRdtGroup, check.Equals, "ff22")
+
+	// check disk quota
+	diskQuota := inspectJSON.Config.Labels["DiskQuota"]
+	if diskQuota != "5g" {
+		c.Fatalf("failed to get label DiskQuota=5g")
+	}
+
+	// check label
+	label1 := inspectJSON.Config.Labels["label1"]
+	if label1 != "aaa" {
+		c.Fatalf("failed to get label1=aaa")
+	}
+
+	// check env
+	if !utils.StringInSlice(inspectJSON.Config.Env, "env1=bbb") {
+		c.Fatalf("failed to get env1=bbb")
+	}
 }
