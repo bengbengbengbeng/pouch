@@ -38,6 +38,7 @@ func (suite *PouchPluginSuite) SetUpSuite(c *check.C) {
 
 	environment.PruneAllContainers(apiClient)
 	PullImage(c, busyboxImage)
+	PullImage(c, alios7u)
 }
 
 // TearDownTest does cleanup work in the end of each test.
