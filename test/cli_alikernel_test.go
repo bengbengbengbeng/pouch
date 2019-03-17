@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -228,5 +229,53 @@ func (suite *PouchAliKernelSuite) TestContainerNS(c *check.C) {
 		c.Assert(err, check.IsNil)
 
 		c.Assert(strings.TrimSpace(cns), check.Not(check.Equals), strings.TrimSpace(hns))
+	}
+}
+
+// tests runc should set env file in /etc/instanceInfo, we skip test /etc/profile.d/pouchenv.sh
+// since it only exist when /etc/profile.d/ exist
+func (suite *PouchAliKernelSuite) TestContainerENV(c *check.C) {
+	name := "TestContainerENV"
+	defer DelContainerForceMultyTime(c, name)
+
+	command.PouchRun("run", "--name", name, "-e", "a=b", "-d", busyboxImage, "top").Assert(c, icmd.Success)
+
+	res := command.PouchRun("exec", name, "env").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "a=b"), check.IsNil)
+	res = command.PouchRun("exec", name, "cat", "/etc/instanceInfo").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "env_a = b"), check.IsNil)
+
+	// test env update should take effect in /etc/instanceInfo
+	command.PouchRun("update", "-e", "a=newb", name).Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "env").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "a=newb"), check.IsNil)
+	res = command.PouchRun("exec", name, "cat", "/etc/instanceInfo").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "env_a = newb"), check.IsNil)
+}
+
+// tests container open file limit should be 655350
+// see runc http://gitlab.alibaba-inc.com/pouch/runc/commit/a5e77db5ffedd153cc777491b01b55553a1157bc
+func (suite *PouchAliKernelSuite) TestContainerRlimit(c *check.C) {
+	name := "TestContainerRlimit"
+	defer DelContainerForceMultyTime(c, name)
+
+	command.PouchRun("run", "--name", name, "-d", busyboxImage, "top").Assert(c, icmd.Success)
+
+	pid := strings.TrimSpace(command.PouchRun("inspect", "-f", "{{.State.Pid}}", name).Stdout())
+	c.Assert(strings.TrimSpace(pid), check.Not(check.Equals), "0")
+
+	data, err := ioutil.ReadFile("/proc/" + pid + "/limits")
+	c.Assert(err, check.IsNil)
+	splits := strings.Split(string(data), "\n")
+
+	for _, line := range splits {
+		if !strings.Contains(line, "open files") {
+			continue
+		}
+
+		if !strings.Contains(line, "655350") {
+			c.Fatalf("container open files limit should be 655350")
+		}
+		break
 	}
 }
