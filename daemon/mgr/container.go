@@ -400,8 +400,9 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		config.HostConfig.Runtime = mgr.Config.DefaultRuntime
 	}
 
-	if _, exist := mgr.Config.Runtimes[config.HostConfig.Runtime]; !exist {
-		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s", config.HostConfig.Runtime)
+	config.HostConfig.RuntimeType, err = mgr.getRuntimeType(config.HostConfig.Runtime)
+	if err != nil {
+		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s: %v", config.HostConfig.Runtime, err)
 	}
 
 	labels := make(map[string]string)
@@ -808,7 +809,11 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 	// set container's LogPath
 	mgr.SetContainerLogPath(c)
 
-	runtime, err := mgr.getRuntime(c.HostConfig.Runtime)
+	if c.HostConfig.RuntimeType == "" {
+		c.HostConfig.RuntimeType = ctrd.RuntimeTypeV1
+	}
+
+	runtimeOptions, err := mgr.generateRuntimeOptions(c.HostConfig.Runtime)
 	if err != nil {
 		return err
 	}
@@ -817,7 +822,8 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 		ID:             c.ID,
 		Image:          c.Config.Image,
 		Labels:         c.Config.Labels,
-		Runtime:        runtime,
+		RuntimeType:    c.HostConfig.RuntimeType,
+		RuntimeOptions: runtimeOptions,
 		Spec:           sw.s,
 		IO:             mgr.IOs.Get(c.ID),
 		RootFSProvided: c.RootFSProvided,
@@ -1947,8 +1953,14 @@ func (mgr *ContainerManager) setBaseFS(ctx context.Context, c *Container) {
 		return
 	}
 
-	// io.containerd.runtime.v1.linux as a const used by runc
-	c.BaseFS = filepath.Join(mgr.Config.HomeDir, "containerd/state", "io.containerd.runtime.v1.linux", mgr.Config.DefaultNamespace, c.ID, "rootfs")
+	var managerID string
+	if c.HostConfig.RuntimeType == ctrd.RuntimeTypeV1 {
+		managerID = ctrd.RuntimeTypeV1
+	} else {
+		managerID = "io.containerd.runtime.v2.task"
+	}
+
+	c.BaseFS = filepath.Join(mgr.Config.HomeDir, "containerd/state", managerID, mgr.Config.DefaultNamespace, c.ID, "rootfs")
 }
 
 // execProcessGC cleans unused exec processes config every 5 minutes.
