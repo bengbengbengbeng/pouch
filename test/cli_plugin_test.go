@@ -383,9 +383,11 @@ func (suite *PouchPluginSuite) TestPouchLabelConvert(c *check.C) {
 
 	expectedstring := "pouchSupportCgroup=true"
 	output := command.PouchRun("inspect", "-f", "{{.Config.Env}}", name).Stdout()
-	if !strings.Contains(output, expectedstring) {
-		c.Errorf("%s should contains %s", output, expectedstring)
-	}
+	c.Assert(util.PartialEqual(output, expectedstring), check.IsNil)
+
+	// test cgroup is rw mount in container
+	res = command.PouchRun("exec", name, "sh", "-c", "mkdir /sys/fs/cgroup/cpu/test")
+	res.Assert(c, icmd.Success)
 }
 
 // TestEnvAliJvmCgroup: -e ali_jvm_cgroup=true allow container get all capabilities and make cgroup writeable
