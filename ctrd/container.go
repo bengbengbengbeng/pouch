@@ -25,14 +25,18 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/oci"
-	"github.com/containerd/containerd/runtime/linux/runctypes"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	runtimeRoot = "/run"
+	// RuntimeRoot is the base directory path for each runtime.
+	RuntimeRoot = "/run"
+	// RuntimeTypeRuncV1 is the runtime type name for runc containerd shim interface v1 version.
+	RuntimeTypeRuncV1 = fmt.Sprintf("io.containerd.runtime.v1.%s", runtime.GOOS)
+	// RuntimeTypeRuncV2 is the runtime type name for runc containerd shim interface v2 version.
+	RuntimeTypeRuncV2 = "io.containerd.runc.v1"
 )
 
 type containerPack struct {
@@ -543,11 +547,7 @@ func (c *Client) createContainer(ctx context.Context, ref, id, checkpointDir str
 	options := []containerd.NewContainerOpts{
 		containerd.WithSnapshotter(CurrentSnapshotterName(ctx)),
 		containerd.WithContainerLabels(container.Labels),
-		containerd.WithRuntime(fmt.Sprintf("io.containerd.runtime.v1.%s", runtime.GOOS), &runctypes.RuncOptions{
-			Runtime:       container.Runtime,
-			RuntimeRoot:   runtimeRoot,
-			SystemdCgroup: container.UseSystemd,
-		}),
+		containerd.WithRuntime(container.RuntimeType, container.RuntimeOptions),
 	}
 
 	rootFSPath := "rootfs"
