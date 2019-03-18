@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alibaba/pouch/apis/opts"
 	"github.com/alibaba/pouch/apis/server"
 	serverTypes "github.com/alibaba/pouch/apis/server/types"
 	"github.com/alibaba/pouch/apis/types"
@@ -22,6 +23,7 @@ import (
 	"github.com/alibaba/pouch/version"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -159,7 +161,10 @@ type ContainerCreateConfigWrapper struct {
 
 func containerCreateWrapper(h serverTypes.Handler) serverTypes.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		logrus.Infof("container create wrapper method called")
+
 		buffer, _ := ioutil.ReadAll(req.Body)
+		logrus.Infof("create container with body %s", string(buffer))
 
 		// decode container config by alidocker-1.12.6 struct
 		configWrapper := &ContainerCreateConfigWrapper{}
@@ -379,7 +384,15 @@ func convertAnnotationToDockerHostConfig(specAnnotation map[string]string, resou
 
 // UpdateConfigWrapper defines the alidocker's UpdateConfig
 type UpdateConfigWrapper struct {
-	ResourcesWrapper
+	InnerResources
+
+	RestartPolicy  types.RestartPolicy
+	ImageID        string
+	Env            []string
+	Label          []string
+	DiskQuota      string
+	Network        string
+	SpecAnnotation map[string]string `json:"SpecAnnotation,omitempty"`
 }
 
 func containerUpdateWrapper(h serverTypes.Handler) serverTypes.Handler {
@@ -388,36 +401,75 @@ func containerUpdateWrapper(h serverTypes.Handler) serverTypes.Handler {
 			return h(ctx, rw, req)
 		}
 
+		logrus.Infof("container update wrapper method called")
+
 		buffer, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			return err
 		}
+		logrus.Infof("update container with body %s", string(buffer))
 
 		// decode container config by alidocker-1.12.6 struct
-		configWrapper := &UpdateConfigWrapper{}
-		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(configWrapper); err != nil {
-			return httputils.NewHTTPError(err, http.StatusBadRequest)
+		updateConfigWrap := &UpdateConfigWrapper{}
+		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(updateConfigWrap); err != nil {
+			// if can't decode by UpdateConfigWrapper,
+			// we just pass it into pouch daemon to deal with it.
+			logrus.Warn("failed to decode update body, pass it into pouch daemon")
+			req.Body = ioutil.NopCloser(bytes.NewReader(buffer))
+			return h(ctx, rw, req)
 		}
 
-		config := &types.UpdateConfig{}
-		if err := json.NewDecoder(bytes.NewReader(buffer)).Decode(config); err != nil {
-			return httputils.NewHTTPError(err, http.StatusBadRequest)
+		var diskQuota map[string]string
+		if updateConfigWrap.DiskQuota != "" {
+			// Notes: compatible with alidocker, if DiskQuota is not empty,
+			// should also update the DiskQuota Label
+			labelDiskQuota := fmt.Sprintf("DiskQuota=%s", updateConfigWrap.DiskQuota)
+			if !utils.StringInSlice(updateConfigWrap.Label, labelDiskQuota) {
+				updateConfigWrap.Label = append(updateConfigWrap.Label, labelDiskQuota)
+			}
+
+			diskQuota, err = opts.ParseDiskQuota(strings.Split(updateConfigWrap.DiskQuota, ";"))
+			if err != nil {
+				logrus.Errorf("failed to parse update disk quota: %s, err: %v", updateConfigWrap.DiskQuota, err)
+				return errors.Wrapf(err, "failed to parse update disk quota(%s)", updateConfigWrap.DiskQuota)
+			}
 		}
 
-		specAnnotation := config.SpecAnnotation
+		var resource types.Resources
+		data, err := json.Marshal(updateConfigWrap.InnerResources)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal json with InnerResources, [%v]", updateConfigWrap.InnerResources)
+		}
+		err = json.Unmarshal(data, &resource)
+		if err != nil {
+			return errors.Wrapf(err, "failed to unmarshal json with Resources")
+		}
+
+		updateConfig := types.UpdateConfig{
+			Resources:      resource,
+			DiskQuota:      diskQuota,
+			Env:            updateConfigWrap.Env,
+			Label:          updateConfigWrap.Label,
+			RestartPolicy:  &updateConfigWrap.RestartPolicy,
+			SpecAnnotation: updateConfigWrap.SpecAnnotation,
+		}
+
+		specAnnotation := updateConfig.SpecAnnotation
 		if specAnnotation == nil {
 			specAnnotation = make(map[string]string)
 		}
 
-		convertResourceWrapToAnnotation(&configWrapper.ResourcesWrapper, specAnnotation)
+		convertResourceWrapToAnnotation(&updateConfigWrap.ResourcesWrapper, specAnnotation)
 
-		config.SpecAnnotation = specAnnotation
+		updateConfig.SpecAnnotation = specAnnotation
 
 		// marshal it as stream and return to the caller
 		var out bytes.Buffer
-		if err := json.NewEncoder(&out).Encode(config); err != nil {
-			return err
+		err = json.NewEncoder(&out).Encode(updateConfig)
+		if err != nil {
+			return errors.Wrapf(err, "failed to encode json(%v)", updateConfig)
 		}
+
 		logrus.Infof("after process update container body is %s", string(out.Bytes()))
 
 		req.Body = ioutil.NopCloser(&out)
