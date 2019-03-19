@@ -281,3 +281,35 @@ func (suite *PouchUpdateInternalSuite) TestUpdateMemoryDroppable(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(value, check.Equals, "0")
 }
+
+// TestUpdateMemoryExtraBytes test set memory.extra_in_bytes, note that this value is aligned by 4096
+func (suite *PouchUpdateInternalSuite) TestUpdateMemoryExtraBytes(c *check.C) {
+	cgroupExist, err := checkCgroupExist("memory", "memory.extra_in_bytes")
+	c.Assert(err, check.IsNil)
+
+	if !cgroupExist {
+		c.Skip(fmt.Sprintf("cgroup %s is not exist", "memory.extra_in_bytes"))
+	}
+
+	cname := "TestUpdateMemoryExtraBytes"
+	originAnnotation := fmt.Sprintf("%s=4096", hp.SpecMemoryExtraInBytes)
+	updateAnnotation := fmt.Sprintf("%s=8192", hp.SpecMemoryExtraInBytes)
+
+	command.PouchRun("run", "-d", "--name", cname, "--memory", "1g", "--annotation", originAnnotation, busyboxImage, "top").Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, cname)
+
+	cid, err := inspectFilter(cname, ".ID")
+	c.Assert(err, check.IsNil)
+
+	checkContainerAnnotation(c, cname, hp.SpecMemoryExtraInBytes, "4096")
+	value, err := readCgroupValue(cid, "memory", "memory.extra_in_bytes")
+	c.Assert(err, check.IsNil)
+	c.Check(value, check.Equals, "4096")
+
+	command.PouchRun("update", "--annotation", updateAnnotation, cname).Assert(c, icmd.Success)
+
+	checkContainerAnnotation(c, cname, hp.SpecMemoryExtraInBytes, "8192")
+	value, err = readCgroupValue(cid, "memory", "memory.extra_in_bytes")
+	c.Assert(err, check.IsNil)
+	c.Check(value, check.Equals, "8192")
+}
