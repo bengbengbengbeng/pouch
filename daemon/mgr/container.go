@@ -1223,12 +1223,10 @@ func (mgr *ContainerManager) Update(ctx context.Context, name string, config *ty
 	// If container is running, we need to update configs to the real world.
 	if c.IsRunning() {
 		c.Lock()
-		err = createUpdateSpec(c.ID, config.SpecAnnotation)
-		c.Unlock()
-
-		if err != nil {
-			return err
+		if err := createUpdateSpec(c.ID, config.SpecAnnotation); err != nil {
+			logrus.Warnf("failed to create update json for %s: %v", c.ID, err)
 		}
+		c.Unlock()
 
 		defer func() {
 			er := clearUpdateSpec(c.ID)
