@@ -195,7 +195,7 @@ type Container struct {
 	Driver string `json:"Driver,omitempty"`
 
 	// exec ids
-	ExecIds []string `json:"ExecIDs,omitempty"`
+	ExecIds []string `json:"-"`
 
 	// Snapshotter, GraphDriver is same, keep both
 	// just for compatibility
