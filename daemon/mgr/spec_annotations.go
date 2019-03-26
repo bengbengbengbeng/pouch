@@ -27,6 +27,10 @@ func setupAnnotations(ctx context.Context, c *Container, s *specs.Spec) error {
 
 	s.Annotations["__schedule_latency_switch"] = strconv.FormatInt(r.ScheLatSwitch, 10)
 
+	if c.RootFSProvided {
+		s.Annotations["provided_rootfs"] = c.BaseFS
+	}
+
 	// add additional spec annotations
 	annotations := c.Config.SpecAnnotation
 	for k, v := range annotations {
