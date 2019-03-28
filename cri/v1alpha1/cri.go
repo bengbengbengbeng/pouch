@@ -537,9 +537,9 @@ func (c *CriManager) CreateContainer(ctx context.Context, r *runtime.CreateConta
 	}
 
 	specAnnotation := make(map[string]string)
-	specAnnotation[anno.ContainerType] = anno.ContainerTypeContainer
-	specAnnotation[anno.SandboxName] = podSandboxID
-	specAnnotation[anno.SandboxID] = podSandboxID
+	specAnnotation[anno.CRIOContainerType] = anno.ContainerTypeContainer
+	specAnnotation[anno.CRIOSandboxName] = podSandboxID
+	specAnnotation[anno.CRIOSandboxID] = podSandboxID
 
 	createConfig := &apitypes.ContainerCreateConfig{
 		ContainerConfig: apitypes.ContainerConfig{
