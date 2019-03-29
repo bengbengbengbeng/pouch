@@ -45,27 +45,6 @@ func getEnv(env []string, key string) string {
 	return ""
 }
 
-func setEnv(env []string, key, value string) []string {
-	mapEnv := map[string]string{}
-	retEnv := []string{}
-	for _, e := range env {
-		kvs := strings.SplitN(e, "=", 2)
-		if len(kvs) != 2 {
-			retEnv = append(retEnv, e)
-			continue
-		}
-
-		mapEnv[kvs[0]] = kvs[1]
-	}
-
-	mapEnv[key] = value
-	for k, v := range mapEnv {
-		retEnv = append(retEnv, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return retEnv
-}
-
 func addParamsForOverlay(m map[string]string, env []string) {
 	if getEnv(env, "OverlayNetwork") == optionOn {
 		m["OverlayNetwork"] = optionOn
