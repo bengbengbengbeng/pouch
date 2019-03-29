@@ -660,52 +660,6 @@ func (suite *PouchPluginSuite) TestSetCopyPodHosts(c *check.C) {
 	command.PouchRun("exec", name2, "bash", "-c", cmd).Assert(c, icmd.Success)
 }
 
-// TestRichContainerCompatible: set ali.host.dns=true, com.alipay.acs.container.server_type=DOCKER_VM
-// or CopyHosts=true to test rich mode
-func (suite *PouchPluginSuite) TestRichContainerCompatible(c *check.C) {
-	//case 1: add label ali.host.dns=true
-	name1 := "TestRichContainerCompatiblev1"
-	res := command.PouchRun("run", "-d", "-l", "ali.host.dns=true", "-v", "/etc/:/tmp/etc/", "--name", name1, alios7u)
-	defer DelContainerForceMultyTime(c, name1)
-	res.Assert(c, icmd.Success)
-
-	cmd := "diff /etc/resolv.conf /tmp/etc/resolv.conf"
-	command.PouchRun("exec", name1, "bash", "-c", cmd).Assert(c, icmd.Success)
-	expectedstring := "ali_run_mode=vm"
-	output := command.PouchRun("inspect", "-f", "{{.Config.Env}}", name1).Stdout()
-	if !strings.Contains(output, expectedstring) {
-		c.Errorf("%s should contains %s", output, expectedstring)
-	}
-
-	// case 2 : add label com.alipay.acs.container.server_type=DOCKER_VM
-	name2 := "TestRichContainerCompatiblev2"
-	res = command.PouchRun("run", "-d", "-l", "com.alipay.acs.container.server_type=DOCKER_VM", "-v", "/etc/:/tmp/etc/", "--name", name2, alios7u)
-	defer DelContainerForceMultyTime(c, name2)
-	res.Assert(c, icmd.Success)
-
-	cmd = "diff /etc/resolv.conf /tmp/etc/resolv.conf"
-	command.PouchRun("exec", name2, "bash", "-c", cmd).Assert(c, icmd.Success)
-	expectedstring = "ali_run_mode=vm"
-	output = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name2).Stdout()
-	if !strings.Contains(output, expectedstring) {
-		c.Errorf("%s should contains %s", output, expectedstring)
-	}
-
-	// case 3 : add env CopyHosts=true
-	name3 := "TestRichContainerCompatiblev3"
-	res = command.PouchRun("run", "-d", "-e", "CopyHosts=true", "-v", "/etc/:/tmp/etc/", "--name", name3, alios7u)
-	defer DelContainerForceMultyTime(c, name3)
-	res.Assert(c, icmd.Success)
-
-	cmd = "diff /etc/resolv.conf /tmp/etc/resolv.conf"
-	command.PouchRun("exec", name3, "bash", "-c", cmd).Assert(c, icmd.Success)
-	expectedstring = "ali_run_mode=vm"
-	output = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name3).Stdout()
-	if !strings.Contains(output, expectedstring) {
-		c.Errorf("%s should contains %s", output, expectedstring)
-	}
-}
-
 // TestLabelDiskQuotaFull: set -l DiskQuota=10G
 func (suite *PouchPluginSuite) TestLabelDiskQuotaFull(c *check.C) {
 	tests := []struct {
