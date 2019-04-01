@@ -1236,3 +1236,77 @@ func (suite *PouchPluginSuite) TestCpusharePreloadHook(c *check.C) {
 		c.Errorf("%s should containers %s", output, expectedString)
 	}
 }
+
+// TestCopyHosts tests label ali.host.dns=true, com.alipay.acs.container.server.type=DOCKER_VM and env CopyHosts=true
+func (suite *PouchPluginSuite) TestCopyHosts(c *check.C) {
+	tmpDir, err := ioutil.TempDir("/tmp", "TestCopyHosts")
+	c.Assert(err, check.IsNil)
+	defer os.RemoveAll(tmpDir)
+
+	//case 1: add label ali.host.dns=true
+	name1 := "TestCopyHostsv1"
+	hostcmd := fmt.Sprintf("cp /etc/hosts %s/hosts", tmpDir)
+	icmd.RunCommand("bash", "-c", hostcmd).Assert(c, icmd.Success)
+
+	res := command.PouchRun("run", "-d", "-l", "ali.host.dns=true", "-v", "/etc/:/tmp/etc/", "-v", fmt.Sprintf("%s:/tmp/CopyHosts", tmpDir), "--name", name1, busyboxImage, "top")
+	defer DelContainerForceMultyTime(c, name1)
+	res.Assert(c, icmd.Success)
+
+	output := command.PouchRun("exec", name1, "sh", "-c", "cat /proc/1/cmdline").Stdout()
+	if !strings.HasPrefix(output, "top") {
+		c.Errorf("%s should be %s", output, "top")
+	}
+
+	diffCmd := "diff /etc/hosts /tmp/etc/hosts"
+	command.PouchRun("exec", name1, "sh", "-c", diffCmd).Assert(c, icmd.Success)
+	expectedstring := "label__ali_host_dns=true"
+	output = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name1).Stdout()
+	if !strings.Contains(output, expectedstring) {
+		c.Errorf("%s should contains %s", output, expectedstring)
+	}
+
+	addHosts := "1.1.1.1 a.a.a.a"
+	cmdSetHosts := fmt.Sprintf("echo '%s' >> /etc/hosts", addHosts)
+	command.PouchRun("exec", name1, "sh", "-c", cmdSetHosts).Assert(c, icmd.Success)
+	// write new hosts to host tmpDir
+	hostcmd = fmt.Sprintf("echo '%s' >> %s", addHosts, fmt.Sprintf("%s/hosts", tmpDir))
+	icmd.RunCommand("bash", "-c", hostcmd).Assert(c, icmd.Success)
+
+	command.PouchRun("restart", name1).Assert(c, icmd.Success)
+	diffCmd = "diff /tmp/CopyHosts/hosts /etc/hosts"
+	command.PouchRun("exec", name1, "sh", "-c", diffCmd).Assert(c, icmd.Success)
+
+	// case 2 : add label com.alipay.acs.container.server_type=DOCKER_VM
+	name2 := "TestCopyHostsv2"
+	res = command.PouchRun("run", "-d", "-l", "com.alipay.acs.container.server_type=DOCKER_VM", "-v", "/etc/:/tmp/etc/", "-v", fmt.Sprintf("%s:/tmp/CopyHosts", tmpDir), "--name", name2, busyboxImage, "top")
+	defer DelContainerForceMultyTime(c, name2)
+	res.Assert(c, icmd.Success)
+
+	output = command.PouchRun("exec", name1, "sh", "-c", "cat /proc/1/cmdline").Stdout()
+	if !strings.HasPrefix(output, "top") {
+		c.Errorf("%s should be %s", output, "top")
+	}
+
+	diffCmd = "diff /etc/resolv.conf /tmp/etc/resolv.conf"
+	command.PouchRun("exec", name2, "sh", "-c", diffCmd).Assert(c, icmd.Success)
+	expectedstring = "label__com_alipay_acs_container_server_type=DOCKER_VM"
+	output = command.PouchRun("inspect", "-f", "{{.Config.Env}}", name2).Stdout()
+	if !strings.Contains(output, expectedstring) {
+		c.Errorf("%s should contains %s", output, expectedstring)
+	}
+
+	hostcmd = fmt.Sprintf("cp /etc/resolv.conf %s/resolv.conf", tmpDir)
+	icmd.RunCommand("bash", "-c", hostcmd).Assert(c, icmd.Success)
+
+	// update /etc/resolv.conf
+	addNameServer := "nameserver 1.1.1.1"
+	cmdSetResolv := fmt.Sprintf("echo '%s' >> /etc/resolv.conf", addNameServer)
+	command.PouchRun("exec", name2, "sh", "-c", cmdSetResolv).Assert(c, icmd.Success)
+	// write new nameserver to host otherTmpdir
+	hostcmd = fmt.Sprintf("echo '%s' >> %s", addNameServer, fmt.Sprintf("%s/resolv.conf", tmpDir))
+	icmd.RunCommand("bash", "-c", hostcmd).Assert(c, icmd.Success)
+
+	command.PouchRun("restart", name2).Assert(c, icmd.Success)
+	diffCmd = "diff /tmp/CopyHosts/resolv.conf /etc/resolv.conf"
+	command.PouchRun("exec", name2, "sh", "-c", diffCmd).Assert(c, icmd.Success)
+}
