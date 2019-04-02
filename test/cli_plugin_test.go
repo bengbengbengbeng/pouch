@@ -544,9 +544,9 @@ func (suite *PouchPluginSuite) TestSetCopyPodHosts(c *check.C) {
 
 	defer DelContainerForceMultyTime(c, primaryName)
 
-	// case1: create container with vm mode and container network
+	// case1: create container with ali.host.dns=true and container network
 	name1 := "TestCWithCpPodHostsLabel"
-	res = command.PouchRun("run", "-d", "-e", "ali_run_mode=common_vm", "--name", name1, "-l", fmt.Sprintf("%s=true", copyPodHostsLabel),
+	res = command.PouchRun("run", "-d", "--name", name1, "-l", "ali.host.dns=true", "-l", fmt.Sprintf("%s=true", copyPodHostsLabel),
 		"--net", fmt.Sprintf("container:%s", primaryCid), "-v", fmt.Sprintf("%s:/etc/resolv.conf", confFile), "-v", fmt.Sprintf("%s:/tmp/etc", otherTmpDir), alios7u)
 	res.Assert(c, icmd.Success)
 	defer DelContainerForceMultyTime(c, name1)
@@ -584,7 +584,7 @@ func (suite *PouchPluginSuite) TestSetCopyPodHosts(c *check.C) {
 	cmd = "diff /tmp/etc/resolv.conf /etc/resolv.conf"
 	command.PouchRun("exec", name1, "bash", "-c", cmd).Assert(c, icmd.Success)
 
-	// case2: create container with vm mode and bridge network, add bind of /etc/hostname
+	// case2: create container with com.alipay.acs.container.server_type=DOCKER_VM and bridge network, add bind of /etc/hostname
 	hostnameFile, err := makeHostnameFile(tmpDir)
 	c.Assert(err, check.IsNil)
 
@@ -598,7 +598,7 @@ func (suite *PouchPluginSuite) TestSetCopyPodHosts(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	name2 := "TestCWithCpPodHostsLabelv2"
-	res = command.PouchRun("run", "-d", "-e", "ali_run_mode=common_vm", "--name", name2, "-l",
+	res = command.PouchRun("run", "-d", "--name", name2, "-l", "com.alipay.acs.container.server_type=DOCKER_VM", "-l",
 		fmt.Sprintf("%s=true", copyPodHostsLabel), "-v", fmt.Sprintf("%s:/etc/resolv.conf", confFile),
 		"-v", fmt.Sprintf("%s:/etc/hostname", hostnameFile), "-v", fmt.Sprintf("%s:/tmp/etc", otherTmpDir), alios7u, "sleep", "10000")
 	res.Assert(c, icmd.Success)
