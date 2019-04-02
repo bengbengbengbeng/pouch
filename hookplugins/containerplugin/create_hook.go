@@ -165,6 +165,30 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 
 	createConfig.HostConfig.CapAdd = UniqueStringSlice(createConfig.HostConfig.CapAdd)
 
+	// match label ali.host.dns and com.alipay.acs.container.server_type
+	keySet := map[string]struct{}{
+		"ali.host.dns":                         {},
+		"ali_host_dns":                         {},
+		"com_alipay_acs_container_server_type": {},
+		"com.alipay.acs.container.server_type": {},
+		"ali_call_scm":                         {},
+		"ali.call.scm":                         {},
+	}
+
+	// convert label to env
+	for k, v := range createConfig.Labels {
+		lowerKey := strings.ToLower(k)
+		if _, ok := keySet[lowerKey]; !ok {
+			continue
+		}
+		createConfig.Env = append(createConfig.Env, fmt.Sprintf("%s=%s", escapseLableToEnvName(k), v))
+	}
+
+	if createConfig.Labels["ali.host.dns"] == "true" || createConfig.Labels["com.alipay.acs.container.server_type"] == "DOCKER_VM" {
+		// don't bind /etc/hosts /etc/hostname /etc/resolv.conf files into container
+		createConfig.DisableNetworkFiles = true
+	}
+
 	// common vm use rich container which introduced by pouch
 	if getEnv(env, "ali_run_mode") == "vm" || getEnv(env, "ali_run_mode") == "common_vm" {
 		// change common_vm to vm
@@ -172,21 +196,6 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 			if line == "ali_run_mode=common_vm" {
 				createConfig.Env[i] = "ali_run_mode=vm"
 			}
-		}
-
-		keySet := map[string]struct{}{
-			"ali_host_dns":                         {},
-			"com_alipay_acs_container_server_type": {},
-			"ali_call_scm":                         {},
-		}
-
-		// convert label to env
-		for k, v := range createConfig.Labels {
-			lowerKey := strings.ToLower(k)
-			if _, ok := keySet[lowerKey]; !ok {
-				continue
-			}
-			createConfig.Env = append(createConfig.Env, fmt.Sprintf("%s=%s", escapseLableToEnvName(k), v))
 		}
 
 		//don't bind /etc/hosts /etc/hostname /etc/resolv.conf files into container
