@@ -271,11 +271,11 @@ func UniqueStringSlice(s []string) []string {
 
 // isCopyPodHostsOn verify whether container is set copyPodHosts
 func isCopyPodHostsOn(config *types.ContainerConfig, hostConfig *types.HostConfig) bool {
-	if getEnv(config.Env, "ali_run_mode") != "vm" {
+	if mgr.IsHost(hostConfig.NetworkMode) {
 		return false
 	}
 
-	if mgr.IsHost(hostConfig.NetworkMode) {
+	if !config.DisableNetworkFiles {
 		return false
 	}
 
