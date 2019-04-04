@@ -154,7 +154,9 @@ func (rc *RunCommand) runRun(args []string) error {
 	if rc.attach || rc.stdin {
 		<-wait
 	} else {
+		// detach mode should print id and return directly
 		fmt.Fprintf(os.Stdout, "%s\n", result.ID)
+		return nil
 	}
 
 	info, err := apiClient.ContainerGet(ctx, containerName)
