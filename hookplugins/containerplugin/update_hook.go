@@ -12,6 +12,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	// envHitList record the env key which will not set in /etc/profile.d/pouch.env
+	envHitList = map[string]struct{}{
+		"HOME": {},
+		"USER": {},
+	}
+)
+
+const enableEnvHistListKey = "pouch.EnableEnvHitList"
+
 // PreUpdate defines plugin point where receives a container update request, in this plugin point user
 // could change the container update body passed-in by http request body.
 func (c *contPlugin) PreUpdate(in io.ReadCloser) (io.ReadCloser, error) {
@@ -29,6 +39,13 @@ func (c *contPlugin) PostUpdate(rootfs string, env []string) error {
 		return nil
 	}
 
+	enableEnvHitList := false
+
+	v := getEnv(env, enableEnvHistListKey)
+	if v == "true" {
+		enableEnvHitList = true
+	}
+
 	var (
 		str              string
 		propertiesEnvStr string
@@ -38,6 +55,13 @@ func (c *contPlugin) PostUpdate(rootfs string, env []string) error {
 		if len(parts) == 1 {
 			parts = append(parts, "")
 		}
+
+		if enableEnvHitList {
+			if _, exist := envHitList[parts[0]]; exist {
+				continue
+			}
+		}
+
 		if len(parts[1]) > 0 && !strings.Contains(parts[0], ".") {
 			s := strings.Replace(parts[1], "\\", "\\\\", -1)
 			s = strings.Replace(s, "\"", "\\\"", -1)
