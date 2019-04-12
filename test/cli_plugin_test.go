@@ -1350,3 +1350,24 @@ func (suite *PouchPluginSuite) TestContainerWithEnableEnvHitList(c *check.C) {
 	output = command.PouchRun("exec", cname, "cat", "/etc/profile.d/pouchenv.sh").Stdout()
 	verifyEnvFileNotIncludeKey(c, output, disableKey)
 }
+
+// TestEnvSN tests check env SN whether have been set into /dev/mem.
+func (suite *PouchPluginSuite) TestEnvSN(c *check.C) {
+	cname := "TestEnvSN"
+	sn := "abcdefg"
+
+	command.PouchRun("run", "-d",
+		"--name", cname,
+		"-e", "SN="+sn,
+		"-v", "/sbin/dmidecode:/tmp/dmidecode:ro",
+		alios7u, "sleep", "10000").Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, cname)
+
+	res := command.PouchRun("exec", cname, "/tmp/dmidecode", "-s", "system-serial-number")
+	res.Assert(c, icmd.Success)
+
+	stdout := res.Stdout()
+	if !strings.Contains(stdout, sn) {
+		c.Fatalf("failed to get sn in container, got(%s), want(%s)", stdout, sn)
+	}
+}
