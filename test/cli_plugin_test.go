@@ -1311,3 +1311,42 @@ func (suite *PouchPluginSuite) TestCopyHosts(c *check.C) {
 	diffCmd = "diff /tmp/CopyHosts/resolv.conf /etc/resolv.conf"
 	command.PouchRun("exec", name2, "sh", "-c", diffCmd).Assert(c, icmd.Success)
 }
+
+func verifyEnvFileNotIncludeKey(c *check.C, output string, disableKeys []string) {
+	for _, line := range strings.Split(output, "\n") {
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		env := strings.SplitN(parts[1], "=", 2)
+		if len(env) != 2 {
+			continue
+		}
+
+		for _, key := range disableKeys {
+			c.Assert(env[0], check.Not(check.Equals), key)
+		}
+	}
+}
+
+// TestContainerWithEnableEnvHitList tests for enable env hit list
+func (suite *PouchPluginSuite) TestContainerWithEnableEnvHitList(c *check.C) {
+	cname := "TestContainerWithEnableEnvHitList"
+	disableKey := []string{"HOME", "USER"}
+
+	command.PouchRun("run", "-d", "--net=none", "-e", "pouch.EnableEnvHitList=true", "-e", "HOME=/root", "--name", cname, alios7u).Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, cname)
+
+	output := command.PouchRun("exec", cname, "cat", "/etc/profile.d/pouchenv.sh").Stdout()
+	verifyEnvFileNotIncludeKey(c, output, disableKey)
+
+	// update env
+	command.PouchRun("update", "-e", "USER=root", cname).Assert(c, icmd.Success)
+	output = command.PouchRun("exec", cname, "cat", "/etc/profile.d/pouchenv.sh").Stdout()
+	verifyEnvFileNotIncludeKey(c, output, disableKey)
+
+	command.PouchRun("restart", cname).Assert(c, icmd.Success)
+	output = command.PouchRun("exec", cname, "cat", "/etc/profile.d/pouchenv.sh").Stdout()
+	verifyEnvFileNotIncludeKey(c, output, disableKey)
+}
