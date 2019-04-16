@@ -3,7 +3,9 @@ package criplugin
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,6 +15,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	// annContainerRootFSWritableLayer annotation applies to the pod that need put
+	// all its containers' rootfs writable layer into a kubernetes volume. Its value
+	// is a convention hostpath, eg: /mnt/storage-backend/volume-name/.rootDir
+	annContainerRootFSWritableLayer = "alibabacloud.com/rootfs-writable-layer"
 )
 
 var (
@@ -164,4 +173,21 @@ func setupDiskQuota(createConfig *apitypes.ContainerCreateConfig) {
 		createConfig.DiskQuota[".*"] = splits[1]
 		createConfig.QuotaID = "-1"
 	}
+}
+
+// setRootFSWritableLayerHomeDir sets container's rootfs writable layer to the specified path
+// if the pod which the container is belong to has annContainerRootFSWritableLayer annotation
+func setRootFSWritableLayerHomeDir(createConfig *apitypes.ContainerCreateConfig, annotations map[string]string) error {
+	if annotations == nil || annotations[annContainerRootFSWritableLayer] == "" {
+		return nil
+	}
+
+	homeDir := filepath.Clean(annotations[annContainerRootFSWritableLayer])
+	volumeMountPoint := filepath.Dir(homeDir)
+	if _, err := os.Stat(volumeMountPoint); err != nil {
+		return errors.Wrapf(err, "volume mount point %v status not ready", volumeMountPoint)
+	}
+
+	createConfig.Home = homeDir
+	return nil
 }
