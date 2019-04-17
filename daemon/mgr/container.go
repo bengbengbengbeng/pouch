@@ -1252,34 +1252,6 @@ func (mgr *ContainerManager) Update(ctx context.Context, name string, config *ty
 	return err
 }
 
-// ensureContainerdShimExited wants to ensure the container process exited when deleted the container
-func (mgr *ContainerManager) ensureContainerdShimExited(ctx context.Context, c *Container) error {
-	// if the container is not running, try to load the container.
-	// because may occur some cases that the container's status is not running,
-	// but the container process is alive.
-	if !c.IsRunningOrPaused() {
-		if err := mgr.Client.RecoverContainer(ctx, c.ID, nil); err != nil {
-			// not exist is a good news
-			if errtypes.IsNotfound(err) {
-				err = nil
-			}
-
-			return err
-		}
-
-		logrus.Warnf("containerd-shim leak: container(%s) is not running but process is alive", c.ID)
-	}
-
-	// if the container is running or the status of container is not running
-	// but load container success, then try to kill the process.
-	_, err := mgr.Client.DestroyContainer(ctx, c.ID, c.StopTimeout())
-	if err != nil && !errtypes.IsNotfound(err) {
-		return errors.Wrapf(err, "failed to destroy container %s when removing", c.ID)
-	}
-
-	return nil
-}
-
 // Remove removes a container, it may be running or stopped and so on.
 func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *types.ContainerRemoveOptions) error {
 	c, err := mgr.container(name)
@@ -1303,16 +1275,17 @@ func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *t
 		return nil
 	}
 
-	// When remove a container, we should make sure the containerd-shim deleted.
-	// so we call the DestroyContainer no matter if the container's status is running or not.
-	if err := mgr.ensureContainerdShimExited(ctx, c); err != nil {
-		return err
-	}
-
-	// After stopping a running container, we should release container resource
-	c.UnsetMergedDir()
-	if err := mgr.releaseContainerResources(c); err != nil {
-		logrus.Errorf("failed to release container %s resources when removing: %v", c.ID, err)
+	// if the container is running, force to stop it.
+	if c.IsRunningOrPaused() && options.Force {
+		_, err := mgr.Client.DestroyContainer(ctx, c.ID, c.StopTimeout())
+		if err != nil && !errtypes.IsNotfound(err) {
+			return errors.Wrapf(err, "failed to destroy container %s when removing", c.ID)
+		}
+		// After stopping a running container, we should release container resource
+		c.UnsetMergedDir()
+		if err := mgr.releaseContainerResources(c); err != nil {
+			logrus.Errorf("failed to release container %s resources when removing: %v", c.ID, err)
+		}
 	}
 
 	if err := mgr.detachVolumes(ctx, c, options.Volumes); err != nil {

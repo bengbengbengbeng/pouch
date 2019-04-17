@@ -61,12 +61,6 @@ func (w *watch) add(pack *containerPack) {
 	w.Lock()
 	defer w.Unlock()
 
-	// we may got some tasks hanged that can not wait the task's status
-	if pack.taskHang {
-		logrus.Infof("add a hanged container, id: %s", pack.id)
-		return
-	}
-
 	// TODO(ziren): AcquireQuota may occurred an error
 	// record stream client for grpc client.
 	_ = pack.client.Consume(1)
