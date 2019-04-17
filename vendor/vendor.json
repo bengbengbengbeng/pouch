@@ -437,6 +437,12 @@
 			"versionExact": "v1.2.5"
 		},
 		{
+			"path": "github.com/containerd/containerd/linux/shim",
+			"revision": "v1.2.5",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
 			"checksumSHA1": "XroqXvw3PWgSUZAIIuMsdxe63mg=",
 			"path": "github.com/containerd/containerd/log",
 			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
@@ -573,6 +579,46 @@
 			"versionExact": "v1.2.5"
 		},
 		{
+			"checksumSHA1": "P46F73AVr+HH2K9P/dnDrjyVnZM=",
+			"path": "github.com/containerd/containerd/runtime/proc",
+			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
+			"revisionTime": "2019-03-13T05:41:42Z",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
+			"checksumSHA1": "AkVmXHET49dxjdYLlmU6VYSjvj8=",
+			"path": "github.com/containerd/containerd/runtime/v1/linux/proc",
+			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
+			"revisionTime": "2019-03-13T05:41:42Z",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
+			"checksumSHA1": "OdVFE/TRTkGBW88DvomGIpOMXlY=",
+			"path": "github.com/containerd/containerd/runtime/v1/shim",
+			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
+			"revisionTime": "2019-03-13T05:41:42Z",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
+			"checksumSHA1": "OF2feMpZMdYb1JPtGeF6/ua0UaQ=",
+			"path": "github.com/containerd/containerd/runtime/v1/shim/client",
+			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
+			"revisionTime": "2019-03-13T05:41:42Z",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
+			"checksumSHA1": "4HVRPBYnVnVXqLWoIR05ZF/yxYI=",
+			"path": "github.com/containerd/containerd/runtime/v1/shim/v1",
+			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
+			"revisionTime": "2019-03-13T05:41:42Z",
+			"version": "v1.2.5",
+			"versionExact": "v1.2.5"
+		},
+		{
 			"checksumSHA1": "Ta8gvFmBCYY1tByMoPBbRiyemBM=",
 			"path": "github.com/containerd/containerd/snapshots",
 			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
@@ -619,6 +665,18 @@
 			"path": "github.com/containerd/fifo",
 			"revision": "fbfb6a11ec671efbe94ad1c12c2e98773f19e1e6",
 			"revisionTime": "2017-07-14T18:39:02Z"
+		},
+		{
+			"checksumSHA1": "reNvOUqwWAbtVBl02Y/pO9muF4k=",
+			"path": "github.com/containerd/go-runc",
+			"revision": "7d11b49dc0769f6dbb0d1b19f3d48524d1bad9ad",
+			"revisionTime": "2019-02-26T15:50:25Z"
+		},
+		{
+			"checksumSHA1": "qEdRr0VPUxXd0pfA7RoR1qvOouo=",
+			"path": "github.com/containerd/ttrpc",
+			"revision": "69144327078caa5a2f1d5eda8bea6110bf16eeb3",
+			"revisionTime": "2019-02-11T04:22:30Z"
 		},
 		{
 			"checksumSHA1": "C/zHQIbD/LkUqbcHibiq/goG0Zw=",
