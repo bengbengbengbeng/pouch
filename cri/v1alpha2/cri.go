@@ -359,9 +359,12 @@ func (c *CriManager) StartPodSandbox(ctx context.Context, r *runtime.StartPodSan
 	podSandboxID := r.GetPodSandboxId()
 
 	// start PodSandbox.
-	startErr := c.ContainerMgr.Start(ctx, podSandboxID, &apitypes.ContainerStartOptions{})
-	if startErr != nil {
-		return nil, fmt.Errorf("failed to start podSandbox %q: %v", podSandboxID, startErr)
+	if err := c.ContainerMgr.Start(ctx, podSandboxID, &apitypes.ContainerStartOptions{}); err != nil {
+		if errtypes.IsNotModified(err) {
+			logrus.Warnf("start a running sandbox %q", podSandboxID)
+			return &runtime.StartPodSandboxResponse{}, nil
+		}
+		return nil, fmt.Errorf("failed to start podSandbox %q: %v", podSandboxID, err)
 	}
 
 	var err error
@@ -793,8 +796,11 @@ func (c *CriManager) StartContainer(ctx context.Context, r *runtime.StartContain
 
 	containerID := r.GetContainerId()
 
-	err := c.ContainerMgr.Start(ctx, containerID, &apitypes.ContainerStartOptions{})
-	if err != nil {
+	if err := c.ContainerMgr.Start(ctx, containerID, &apitypes.ContainerStartOptions{}); err != nil {
+		if errtypes.IsNotModified(err) {
+			logrus.Warnf("start a running container %q", containerID)
+			return &runtime.StartContainerResponse{}, nil
+		}
 		return nil, fmt.Errorf("failed to start container %q: %v", containerID, err)
 	}
 
