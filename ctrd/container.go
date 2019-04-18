@@ -46,9 +46,6 @@ type containerPack struct {
 	client        *WrapperClient
 	skipStopHooks bool
 	l             sync.RWMutex
-
-	// taskHang specified we can not connect to the container task
-	taskHang bool
 }
 
 // ContainerStats returns stats of the container.
@@ -297,10 +294,9 @@ func (c *Client) recoverContainer(ctx context.Context, id string, io *containeri
 	}
 
 	var (
-		timeout  = 5 * time.Second
-		ch       = make(chan error, 1)
-		task     containerd.Task
-		ioAttach cio.Attach
+		timeout = 5 * time.Second
+		ch      = make(chan error, 1)
+		task    containerd.Task
 	)
 
 	// for normal shim, this operation should be end less than 1 second,
@@ -309,31 +305,15 @@ func (c *Client) recoverContainer(ctx context.Context, id string, io *containeri
 	pctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
-		if io != nil {
-			ioAttach = func(fset *cio.FIFOSet) (cio.IO, error) {
-				return c.attachIO(fset, io.InitContainerIO)
-			}
-		}
-		task, err = lc.Task(pctx, ioAttach)
+		task, err = lc.Task(pctx, func(fset *cio.FIFOSet) (cio.IO, error) {
+			return c.attachIO(fset, io.InitContainerIO)
+		})
 		ch <- err
 	}()
 
 	select {
 	case <-time.After(timeout):
-		// If timeout, we can decide that the task is hang, but we must add the
-		// container info to memory, so that we can deal with it later.
-		voidTask, _ := newVoidTask(id)
-		c.watch.add(&containerPack{
-			id:        id,
-			container: lc,
-			taskHang:  true,
-			task:      voidTask,
-			ch:        make(chan *Message, 1),
-			client:    wrapperCli,
-		})
-
-		logrus.Errorf("failed to connect to shim, maybe the task %s is hanged, just prepare an void Task", id)
-		return nil
+		return errors.Wrap(errtypes.ErrTimeout, "failed to connect to shim")
 	case err = <-ch:
 	}
 
@@ -406,21 +386,17 @@ func (c *Client) destroyContainer(ctx context.Context, id string, timeout int64)
 		pack.l.Unlock()
 	}()
 
-	var msg *Message
-
 	waitExit := func() *Message {
 		return c.ProbeContainer(ctx, id, time.Duration(timeout)*time.Second)
 	}
 
-	// check if the container's task is hanged
-	if pack.taskHang {
-		logrus.Warnf("task %s is hanged, just go to kill the containerd-shim process", id)
-		goto clean
-	}
+	var msg *Message
 
 	// TODO: set task request timeout by context timeout
 	if err := pack.task.Kill(ctx, syscall.SIGTERM, containerd.WithKillAll); err != nil {
-		logrus.Errorf("failed to send SIGTERM to task %s: %v", id, err)
+		if !errdefs.IsNotFound(err) {
+			return nil, errors.Wrap(err, "failed to kill task")
+		}
 		goto clean
 	}
 	// wait for the task to exit.
@@ -429,7 +405,9 @@ func (c *Client) destroyContainer(ctx context.Context, id string, timeout int64)
 	if err := msg.RawError(); err != nil && errtypes.IsTimeout(err) {
 		// timeout, use SIGKILL to retry.
 		if err := pack.task.Kill(ctx, syscall.SIGKILL, containerd.WithKillAll); err != nil {
-			logrus.Errorf("failed to send SIGKILL to task %s: %v", id, err)
+			if !errdefs.IsNotFound(err) {
+				return nil, errors.Wrap(err, "failed to kill task")
+			}
 			goto clean
 		}
 		msg = waitExit()
@@ -442,19 +420,6 @@ func (c *Client) destroyContainer(ctx context.Context, id string, timeout int64)
 	}
 
 clean:
-	// if we got here, just call shim delete to release the container process
-	shimClient, err := NewShimClient(ctx, id, c.defaultNS)
-	// success connect containerd-shim
-	if err == nil {
-		if kerr := shimClient.KillShim(ctx); kerr != nil {
-			logrus.Errorf("failed to directly kill containerd-shim %s: %v", id, kerr)
-		}
-
-		logrus.Infof("success to directly kill containerd-shim %s", id)
-	} else {
-		logrus.Warnf("failed to connect to containerd-shim %s: %v", id, err)
-	}
-
 	// for normal destroy process, task.Delete() and container.Delete()
 	// is done in ctrd/watch.go, after task exit. clean is task effect only
 	// when unexcepted error happened in task exit process.

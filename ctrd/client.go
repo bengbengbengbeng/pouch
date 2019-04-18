@@ -44,9 +44,6 @@ type Client struct {
 	pool      []scheduler.Factory
 	scheduler scheduler.Scheduler
 
-	// defaultNS record default namespace for containerd containers
-	defaultNS string
-
 	hooks []func(string, *Message) error
 
 	// eventsHooks specified methods that handle containerd events
@@ -82,7 +79,6 @@ func NewClient(opts ...ClientOpt) (APIClient, error) {
 		watch: &watch{
 			containers: make(map[string]*containerPack),
 		},
-		defaultNS: copts.defaultns,
 	}
 
 	for i := 0; i < copts.grpcClientPoolCapacity; i++ {

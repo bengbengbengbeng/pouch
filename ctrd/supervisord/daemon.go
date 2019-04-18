@@ -49,17 +49,6 @@ type Daemon struct {
 	logger     *logrus.Entry
 }
 
-var daemon *Daemon
-
-// DaemonConfig returns containerd service config.
-func DaemonConfig() (*Config, error) {
-	if daemon != nil {
-		return &daemon.cfg, nil
-	}
-
-	return nil, fmt.Errorf("containerd daemon is nil")
-}
-
 // Address returns containerd grpc address.
 func (d *Daemon) Address() string {
 	return d.cfg.GRPC.Address
@@ -67,7 +56,7 @@ func (d *Daemon) Address() string {
 
 // Start starts containerd in background.
 func Start(ctx context.Context, rootDir, stateDir string, opts ...Opt) (*Daemon, error) {
-	daemon = &Daemon{
+	d := &Daemon{
 		cfg: Config{
 			Root:  rootDir,
 			State: stateDir,
@@ -87,26 +76,26 @@ func Start(ctx context.Context, rootDir, stateDir string, opts ...Opt) (*Daemon,
 	}
 
 	for _, opt := range opts {
-		if err := opt(daemon); err != nil {
+		if err := opt(d); err != nil {
 			return nil, err
 		}
 	}
 
 	// for pid and address
-	if _, err := os.Stat(daemon.stateDir); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(daemon.stateDir, 0666); err != nil {
-			return nil, fmt.Errorf("failed to setup state dir %s: %v", daemon.stateDir, err)
+	if _, err := os.Stat(d.stateDir); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(d.stateDir, 0666); err != nil {
+			return nil, fmt.Errorf("failed to setup state dir %s: %v", d.stateDir, err)
 		}
 	}
 
-	if err := daemon.runContainerd(); err != nil {
+	if err := d.runContainerd(); err != nil {
 		return nil, err
 	}
 
-	if err := daemon.healthPostCheck(); err != nil {
+	if err := d.healthPostCheck(); err != nil {
 		return nil, err
 	}
-	return daemon, nil
+	return d, nil
 }
 
 // Stop stops the containerd in 15 seconds.
