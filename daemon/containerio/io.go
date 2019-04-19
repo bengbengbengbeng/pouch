@@ -4,6 +4,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/daemon/logger"
 	"github.com/alibaba/pouch/daemon/logger/crilog"
 	"github.com/alibaba/pouch/daemon/logger/logbuffer"
@@ -216,4 +217,12 @@ func (ctrio *IO) startLogging() error {
 	})
 	ctrio.logcopier.StartCopy()
 	return nil
+}
+
+// LogDriverName get the logdriver's name
+func (ctrio *IO) LogDriverName() string {
+	if ctrio.logdriver == nil {
+		return types.LogConfigLogDriverNone
+	}
+	return ctrio.logdriver.Name()
 }

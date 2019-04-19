@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/daemon/logger"
 	"github.com/alibaba/pouch/pkg/bytefmt"
 )
@@ -105,7 +106,7 @@ func NewJSONLogFile(logPath string, perms os.FileMode, logConfig map[string]stri
 
 // Name return the log driver's name.
 func (lf *JSONLogFile) Name() string {
-	return "json-file"
+	return types.LogConfigLogDriverJSONFile
 }
 
 // WriteLogMessage will write the LogMessage into the file.

@@ -1721,6 +1721,29 @@ func (mgr *ContainerManager) attachCRILog(c *Container, logPath string) error {
 		return errors.Wrap(errtypes.ErrNotfound, "failed to get containerIO")
 	}
 
+	// using symlink for json-file log
+	if cntrio.LogDriverName() == types.LogConfigLogDriverJSONFile {
+		containerLog := path.Join(mgr.Store.Path(c.ID), "json.log")
+
+		_, err := os.Stat(containerLog)
+		if os.IsNotExist(err) {
+			logrus.Warnf("container log %s not found: %v", containerLog, err)
+			return nil
+		}
+
+		// There are three level logs
+		// 1. /var/log/containers/{pod.name}_{pod.namespace}_{containerName}-{containerId}.log
+		// 2. /var/log/pods/{pod.UID}/{containerName}/{restartCount}.log
+		// 3. {Pouch Home dir}/containers/{containerID}/json.log
+		// kubelet will link the level1 and the level2 logs.
+		// We link the level2 and the level3 logs here.
+		// All of the logs above would write to exactly one file.
+		if err := os.Symlink(containerLog, logPath); err != nil {
+			logrus.Warnf("failed to create symbolic link %s to container %s: %v", logPath, c.ID, err)
+		}
+		return nil
+	}
+
 	return cntrio.AttachCRILog(logPath, c.Config.Tty)
 }
 

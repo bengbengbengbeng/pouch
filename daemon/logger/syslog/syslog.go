@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/daemon/logger"
 	"github.com/alibaba/pouch/daemon/logger/loggerutils"
 
@@ -58,7 +59,7 @@ func NewSyslog(info logger.Info) (*Syslog, error) {
 
 // Name return the log driver's name.
 func (s *Syslog) Name() string {
-	return "syslog"
+	return types.LogConfigLogDriverSyslog
 }
 
 // WriteLogMessage will write the LogMessage.
