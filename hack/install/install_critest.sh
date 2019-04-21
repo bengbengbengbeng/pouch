@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source "./check.sh"
+
 CRITEST_BRANCH_v1alpha1=release-1.9
 CRITEST_BRANCH_DEFAULT=release-1.12
 
@@ -63,7 +65,12 @@ critest::install_ginkgo() {
 
 # critest::install_socat installs socat if missing.
 critest::install_socat() {
-  sudo apt-get install -y socat
+  os_dist="$(detect_os)"
+  if [[ "${os_dist}" = "Ubuntu" ]]; then
+    sudo apt-get install -y socat
+  else
+    sudo yum -y install socat
+  fi
 }
 
 main() {
