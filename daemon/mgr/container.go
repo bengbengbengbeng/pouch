@@ -1171,7 +1171,6 @@ func (mgr *ContainerManager) Update(ctx context.Context, name string, config *ty
 		// support remove some labels
 		newLabels, err := opts.ParseLabels(config.Label)
 		if err != nil {
-			c.Unlock()
 			return errors.Wrapf(err, "failed to parse labels")
 		}
 
