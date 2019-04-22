@@ -26,6 +26,15 @@ const (
 
 	// procMountFile represent the mounts file in proc virtual file system.
 	procMountFile = "/proc/mounts"
+
+	// ext4 filesystem
+	ext4FS = "ext4"
+
+	// ext3 filesystem
+	ext3FS = "ext3"
+
+	// xfs filesystem
+	xfsFS = "xfs"
 )
 
 var (
@@ -389,7 +398,7 @@ func getMountpoint(dir string) (string, error) {
 		}
 
 		// only check xfs/ext3/ext4 file system
-		if parts[2] != "xfs" && parts[2] != "ext3" && parts[2] != "ext4" {
+		if parts[2] != xfsFS && parts[2] != ext3FS && parts[2] != ext4FS {
 			continue
 		}
 
@@ -415,6 +424,56 @@ func getMountpoint(dir string) (string, error) {
 	logrus.Debugf("get the dir(%s)'s mountpoint(%s)", dir, mountPoint)
 
 	return mountPoint, nil
+}
+
+func getMountpointFstype(dir string) (string, string, error) {
+	var (
+		mountPoint string
+		fsType     string
+	)
+
+	output, err := ioutil.ReadFile(procMountFile)
+	if err != nil {
+		logrus.Warnf("failed to read file(%s), err(%v)", procMountFile, err)
+		return "", "", errors.Wrapf(err, "failed to read file(%s)", procMountFile)
+	}
+
+	devID, err := system.GetDevID(dir)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "failed to get device id for dir(%s)", dir)
+	}
+	logrus.Debugf("get dir(%s) device id(%d)", dir, devID)
+
+	for _, line := range strings.Split(string(output), "\n") {
+		parts := strings.Split(line, " ")
+		if len(parts) != 6 {
+			continue
+		}
+
+		if parts[2] != xfsFS && parts[2] != ext3FS && parts[2] != ext4FS {
+			continue
+		}
+
+		newDevID, err := system.GetDevID(parts[1])
+		if err != nil {
+			continue
+		}
+
+		if devID == newDevID && strings.HasPrefix(dir, parts[1]) &&
+			(mountPoint == "" || len(parts[1]) < len(mountPoint)) {
+			mountPoint = parts[1]
+			devID = newDevID
+			fsType = parts[2]
+		}
+	}
+
+	if mountPoint == "" || fsType == "" {
+		return "", "", errors.Errorf("failed to get mount point of dir(%s)", dir)
+	}
+
+	logrus.Debugf("get the dir(%s)'s mountpoint(%s) and fstype(%s)", dir, mountPoint, fsType)
+
+	return mountPoint, fsType, nil
 }
 
 // setDevLimit sets device storage upper limit in quota driver according to inpur dir.
