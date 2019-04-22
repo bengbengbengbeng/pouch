@@ -34,5 +34,9 @@ func (c *criPlugin) PreCreateContainer(createConfig *types.ContainerCreateConfig
 	// it can be removed until DiskQuota move into cri interface.
 	setupDiskQuota(createConfig)
 
+	if err := setRootFSWritableLayerHomeDir(createConfig, sandboxMeta.Config.GetAnnotations()); err != nil {
+		return errors.Wrapf(err, "failed to set rootfs writable layer for container of the sandbox %v", sandboxMeta.ID)
+	}
+
 	return nil
 }
