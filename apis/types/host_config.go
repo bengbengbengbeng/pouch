@@ -138,9 +138,6 @@ type HostConfig struct {
 	// Runtime to use with this container.
 	Runtime string `json:"Runtime,omitempty"`
 
-	// The runtime type used in containerd.
-	RuntimeType string `json:"RuntimeType,omitempty"`
-
 	// A list of string values to customize labels for MLS systems, such as SELinux.
 	SecurityOpt []string `json:"SecurityOpt"`
 
@@ -241,8 +238,6 @@ func (m *HostConfig) UnmarshalJSON(raw []byte) error {
 
 		Runtime string `json:"Runtime,omitempty"`
 
-		RuntimeType string `json:"RuntimeType,omitempty"`
-
 		SecurityOpt []string `json:"SecurityOpt"`
 
 		ShmSize *int64 `json:"ShmSize,omitempty"`
@@ -326,8 +321,6 @@ func (m *HostConfig) UnmarshalJSON(raw []byte) error {
 	m.RichMode = dataAO0.RichMode
 
 	m.Runtime = dataAO0.Runtime
-
-	m.RuntimeType = dataAO0.RuntimeType
 
 	m.SecurityOpt = dataAO0.SecurityOpt
 
@@ -424,8 +417,6 @@ func (m HostConfig) MarshalJSON() ([]byte, error) {
 
 		Runtime string `json:"Runtime,omitempty"`
 
-		RuntimeType string `json:"RuntimeType,omitempty"`
-
 		SecurityOpt []string `json:"SecurityOpt"`
 
 		ShmSize *int64 `json:"ShmSize,omitempty"`
@@ -506,8 +497,6 @@ func (m HostConfig) MarshalJSON() ([]byte, error) {
 	dataAO0.RichMode = m.RichMode
 
 	dataAO0.Runtime = m.Runtime
-
-	dataAO0.RuntimeType = m.RuntimeType
 
 	dataAO0.SecurityOpt = m.SecurityOpt
 

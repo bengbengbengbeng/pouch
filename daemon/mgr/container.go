@@ -400,9 +400,8 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		config.HostConfig.Runtime = mgr.Config.DefaultRuntime
 	}
 
-	config.HostConfig.RuntimeType, err = mgr.getRuntimeType(config.HostConfig.Runtime)
-	if err != nil {
-		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s: %v", config.HostConfig.Runtime, err)
+	if _, exist := mgr.Config.Runtimes[config.HostConfig.Runtime]; !exist {
+		return nil, errors.Wrapf(errtypes.ErrInvalidParam, "unknown runtime %s", config.HostConfig.Runtime)
 	}
 
 	labels := make(map[string]string)
@@ -809,11 +808,7 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 	// set container's LogPath
 	mgr.SetContainerLogPath(c)
 
-	if c.HostConfig.RuntimeType == "" {
-		c.HostConfig.RuntimeType = ctrd.RuntimeTypeRuncV1
-	}
-
-	runtimeOptions, err := mgr.generateRuntimeOptions(c.HostConfig.Runtime)
+	runtime, err := mgr.getRuntime(c.HostConfig.Runtime)
 	if err != nil {
 		return err
 	}
@@ -822,8 +817,7 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 		ID:             c.ID,
 		Image:          c.Config.Image,
 		Labels:         c.Config.Labels,
-		RuntimeType:    c.HostConfig.RuntimeType,
-		RuntimeOptions: runtimeOptions,
+		Runtime:        runtime,
 		Spec:           sw.s,
 		IO:             mgr.IOs.Get(c.ID),
 		RootFSProvided: c.RootFSProvided,
@@ -1953,14 +1947,8 @@ func (mgr *ContainerManager) setBaseFS(ctx context.Context, c *Container) {
 		return
 	}
 
-	var managerID string
-	if c.HostConfig.RuntimeType == ctrd.RuntimeTypeRuncV1 {
-		managerID = ctrd.RuntimeTypeRuncV1
-	} else {
-		managerID = "io.containerd.runtime.v2.task"
-	}
-
-	c.BaseFS = filepath.Join(mgr.Config.HomeDir, "containerd/state", managerID, mgr.Config.DefaultNamespace, c.ID, "rootfs")
+	// io.containerd.runtime.v1.linux as a const used by runc
+	c.BaseFS = filepath.Join(mgr.Config.HomeDir, "containerd/state", "io.containerd.runtime.v1.linux", mgr.Config.DefaultNamespace, c.ID, "rootfs")
 }
 
 // execProcessGC cleans unused exec processes config every 5 minutes.
