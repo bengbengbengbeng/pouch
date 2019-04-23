@@ -36,6 +36,8 @@ func CreateBusyboxContainerOk(c *check.C, cname string, cmd ...string) string {
 		cmd = []string{"top"}
 	}
 
+	PullImage(c, busyboxImage)
+
 	resp, err := CreateBusyboxContainer(cname, cmd...)
 	c.Assert(err, check.IsNil)
 
