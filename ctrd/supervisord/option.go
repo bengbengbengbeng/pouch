@@ -57,3 +57,15 @@ func WithV1RuntimeShimDebug() Opt {
 		return nil
 	}
 }
+
+// WithSnapshotterConfig passes down snapshotter config to containerd
+func WithSnapshotterConfig(s string, c interface{}) Opt {
+	return func(d *Daemon) error {
+		if d.cfg.Plugins == nil {
+			d.cfg.Plugins = map[string]interface{}{}
+		}
+
+		d.cfg.Plugins[s] = c
+		return nil
+	}
+}

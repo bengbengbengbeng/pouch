@@ -78,6 +78,10 @@ func NewDaemon(cfg *config.Config) *Daemon {
 		ctrdDaemonOpts = append(ctrdDaemonOpts, supervisord.WithContainerdBinary(cfg.ContainerdPath))
 	}
 
+	if cfg.Snapshotter != "" && cfg.SnapshotterOpts != nil {
+		ctrdDaemonOpts = append(ctrdDaemonOpts, supervisord.WithSnapshotterConfig(cfg.Snapshotter, cfg.SnapshotterOpts))
+	}
+
 	if cfg.Debug {
 		ctrdDaemonOpts = append(ctrdDaemonOpts, supervisord.WithLogLevel("debug"))
 		ctrdDaemonOpts = append(ctrdDaemonOpts, supervisord.WithV1RuntimeShimDebug())
