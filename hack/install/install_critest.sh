@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
+cd "$(dirname "${BASH_SOURCE[0]}")"
 source "./check.sh"
+cd -
 
 CRITEST_BRANCH_v1alpha1=release-1.9
 CRITEST_BRANCH_DEFAULT=release-1.12

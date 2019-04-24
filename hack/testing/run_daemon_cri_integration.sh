@@ -33,7 +33,6 @@ POUCH_SOCK="/var/run/pouchcri.sock"
 
 # tmplog_dir stores the background job log data
 tmplog_dir="$(mktemp -d /tmp/integration-daemon-cri-testing-XXXXX)"
-pouchd_log="${tmplog_dir}/pouchd.log"
 local_persist_log="${tmplog_dir}/local_persist.log"
 trap 'rm -rf /tmp/integration-daemon-cri-testing-*' EXIT
 
@@ -77,7 +76,7 @@ integration::run_daemon_cri_test_cases() {
   if [[ "${code}" != "0" ]]; then
     echo "failed to pass integration cases!"
     echo "there is daemon logs..."
-    cat "${pouchd_log}"
+    cat /var/log/pouch
     exit ${code}
   fi
 
@@ -97,7 +96,7 @@ integration::run_cri_test(){
   set +e; integration::ping_pouchd; code=$?; set -e
   if [[ "${code}" != "0" ]]; then
     echo "there is daemon logs..."
-    cat "${pouchd_log}"
+    cat /var/log/pouch
     exit ${code}
   fi
   integration::run_daemon_cri_test_cases "${cri_runtime}"
