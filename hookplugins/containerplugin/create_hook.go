@@ -61,8 +61,10 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	}
 	networkMode := createConfig.HostConfig.NetworkMode
 
-	//setup network just in case, skip container/host/node mode network.
-	if !strings.HasPrefix(networkMode, "container:") && networkMode != "host" && networkMode != "none" {
+	//setup network just in case, skip container/host/none/netns mode network.
+	if !strings.HasPrefix(networkMode, "container:") &&
+		!strings.HasPrefix(networkMode, "netns:") &&
+		networkMode != "host" && networkMode != "none" {
 		// check --must-requested-ip in config file: /etc/sysconfig/pouch
 		if mustRequestedIP() {
 			if len(requestedIP) == 0 {
