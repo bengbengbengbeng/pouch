@@ -122,6 +122,9 @@ type Config struct {
 	// Snapshotter is passed to containerd, default to overlayfs
 	Snapshotter string `json:"snapshotter,omitempty"`
 
+	// SnapshotterOpts is options for the snapshotter
+	SnapshotterOpts interface{} `json:"snapshotter_opts,omitempty"`
+
 	// AllowMultiSnapshotter allows multi snapshotter, default false
 	AllowMultiSnapshotter bool `json:"allow-multi-snapshotter,omitempty"`
 
