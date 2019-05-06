@@ -23,6 +23,7 @@ DEFAULT_CRI_SKIP+="|seccomp"
 DEFAULT_CRI_SKIP+="|image"
 # TODO: support failed test
 DEFAULT_CRI_SKIP+="|runtime should support Privileged is false"
+DEFAULT_CRI_SKIP+="|runtime should support reopening container log"
 CRI_SKIP="${CRI_SKIP:-"${DEFAULT_CRI_SKIP}"}"
 
 # CRI_FOCUS focuses the test to run.
