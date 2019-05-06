@@ -29,6 +29,9 @@ func (c *contPlugin) PreStart(config interface{}) ([]int, [][]string, error) {
 		return retPriority, retHookPaths, nil
 	}
 
+	//add pouch environment pouch_container_image and pouch_container_id
+	container.Config.Env = addEnvironment(container.Config.Image, container.ID, container.Config.Env)
+
 	// if copyPodHosts is set, update config and add prestart hook
 	if isCopyPodHostsOn(container.Config, container.HostConfig) {
 		pri, prestartArgs := updateContainerForPodHosts(container)

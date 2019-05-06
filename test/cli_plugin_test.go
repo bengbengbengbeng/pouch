@@ -1371,3 +1371,35 @@ func (suite *PouchPluginSuite) TestEnvSN(c *check.C) {
 		c.Fatalf("failed to get sn in container, got(%s), want(%s)", stdout, sn)
 	}
 }
+
+// TestAddEnvironment add pouch environment pouch_container_image and pouch_container_id
+func (suite *PouchPluginSuite) TestAddEnvironment(c *check.C) {
+	cname := "TestAddEnvironment"
+
+	command.PouchRun("run", "-d",
+		"--name", cname,
+		alios7u, "sleep", "10000").Assert(c, icmd.Success)
+	defer DelContainerForceMultyTime(c, cname)
+
+	res := command.PouchRun("inspect", "-f", "{{.Config.Env}}", cname)
+	expect := "pouch_container_image=" + alios7u
+	output := res.Stdout()
+	c.Assert(util.PartialEqual(output, expect), check.IsNil)
+
+	res = command.PouchRun("inspect", "-f", "{{.ID}}", cname)
+	id := res.Stdout()
+	id = strings.TrimSpace(id)
+	expect = "pouch_container_id=" + id
+	c.Assert(util.PartialEqual(output, expect), check.IsNil)
+
+	expectedstring := "pouch_container_image=\"" + alios7u + "\""
+	cmd := "cat /etc/profile.d/pouchenv.sh"
+	out := command.PouchRun("exec", cname, "bash", "-c", cmd).Stdout()
+	if !strings.Contains(out, expectedstring) {
+		c.Errorf("%s should contains %s", out, expectedstring)
+	}
+	expectedstring = "pouch_container_id=\"" + id + "\""
+	if !strings.Contains(out, expectedstring) {
+		c.Errorf("%s should contains %s", out, expectedstring)
+	}
+}
