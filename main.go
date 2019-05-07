@@ -174,8 +174,10 @@ func runDaemon(cmd *cobra.Command) error {
 		if err := agent.Listen(agent.Options{}); err != nil {
 			logrus.Fatal(err)
 		}
-		debug.SetupDumpStackTrap()
 	}
+
+	// default to setup dump stack
+	debug.SetupDumpStackTrap()
 
 	// resolve home dir.
 	dir, err := utils.ResolveHomeDir(cfg.HomeDir)
