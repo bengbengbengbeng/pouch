@@ -1403,3 +1403,46 @@ func (suite *PouchPluginSuite) TestAddEnvironment(c *check.C) {
 		c.Errorf("%s should contains %s", out, expectedstring)
 	}
 }
+
+// TestRunWithRequestedIP is to verify run container with ipv4 address by env RequestedIP
+func (suite *PouchPluginSuite) TestRunWithRequestedIP(c *check.C) {
+	cname1 := "TestRunWithRequestedIP"
+	ip := "192.168.5.100"
+
+	command.PouchRun("run", "-d", "--name", cname1, "-e", fmt.Sprintf("RequestedIP=%s", ip), alios7u, "sleep", "1000").Assert(c, icmd.Success)
+	defer command.PouchRun("rm", "-vf", cname1)
+
+	res := command.PouchRun("exec", cname1, "ip", "addr", "show")
+	res.Assert(c, icmd.Success)
+
+	stdout := res.Stdout()
+	found := false
+	for _, line := range strings.Split(stdout, "\n") {
+		if strings.Contains(line, ip) {
+			found = true
+			break
+		}
+	}
+
+	c.Assert(found, check.Equals, true)
+
+	cname2 := "TestRunWithIPCheckEnv"
+	ip = "192.168.5.101"
+	command.PouchRun("run", "-d", "--name", cname2, "--ip", ip, alios7u, "sleep", "1000").Assert(c, icmd.Success)
+	defer command.PouchRun("rm", "-vf", cname2)
+
+	res = command.PouchRun("exec", cname2, "cat", "/etc/profile.d/pouchenv.sh")
+	res.Assert(c, icmd.Success)
+
+	stdout = res.Stdout()
+	found = false
+	expectEnv := fmt.Sprintf(`RequestedIP="%s"`, ip)
+	for _, line := range strings.Split(stdout, "\n") {
+		if strings.Contains(line, expectEnv) {
+			found = true
+			break
+		}
+	}
+
+	c.Assert(found, check.Equals, true)
+}

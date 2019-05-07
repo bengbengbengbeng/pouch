@@ -65,6 +65,16 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 	if !strings.HasPrefix(networkMode, "container:") &&
 		!strings.HasPrefix(networkMode, "netns:") &&
 		networkMode != "host" && networkMode != "none" {
+		// set ipv4 into env
+		if requestedIP == "" && createConfig.NetworkingConfig != nil &&
+			createConfig.NetworkingConfig.EndpointsConfig[networkMode] != nil &&
+			createConfig.NetworkingConfig.EndpointsConfig[networkMode].IPAMConfig != nil {
+			requestedIP = createConfig.NetworkingConfig.EndpointsConfig[networkMode].IPAMConfig.IPV4Address
+			if requestedIP != "" {
+				createConfig.Env = append(createConfig.Env, fmt.Sprintf("RequestedIP=%s", requestedIP))
+			}
+		}
+
 		// check --must-requested-ip in config file: /etc/sysconfig/pouch
 		if mustRequestedIP() {
 			if len(requestedIP) == 0 {
@@ -88,9 +98,10 @@ func (c *contPlugin) PreCreate(createConfig *types.ContainerCreateConfig) error 
 			createConfig.NetworkingConfig.EndpointsConfig = make(map[string]*types.EndpointSettings)
 		}
 
-		if nwName, e := prepareNetwork(requestedIP, defaultRoute, mask, nic, networkMode,
-			createConfig.NetworkingConfig.EndpointsConfig, env); e != nil {
-			return e
+		nwName, err := prepareNetwork(requestedIP, defaultRoute, mask, nic, networkMode,
+			createConfig.NetworkingConfig.EndpointsConfig, env)
+		if err != nil {
+			return err
 		} else if nwName != networkMode {
 			createConfig.HostConfig.NetworkMode = nwName
 		}

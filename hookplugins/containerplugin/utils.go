@@ -78,11 +78,11 @@ func prepareNetwork(requestedIP, defaultRoute, mask, nic string, networkMode str
 	nwName = networkMode
 	nwIf := nic
 
-	if requestedIP == "" || defaultRoute == "" || mask == "" || nic == "" {
+	if requestedIP == "" {
 		if checkNatBridge() {
 			return
 		}
-		return nwName, errors.Errorf("bridge network must set -e RequestedIP, -e DefaultRoute, -e DefaultMask, -e DefaultNic")
+		return nwName, errors.Errorf("bridge network must set -e RequestedIP")
 	}
 
 	if nic == "bond0" || nic == "docker0" {
@@ -97,7 +97,10 @@ func prepareNetwork(requestedIP, defaultRoute, mask, nic string, networkMode str
 		nwName = nwName + ".overlay"
 	}
 	logrus.Infof("create container network params %s %s %s %s %s", requestedIP, defaultRoute, mask, nic, networkMode)
-	if networkMode == "default" || "bridge" == networkMode || networkMode == nwName {
+
+	// 如果设置了网络四元组，同时网络是默认网络、bridge、自定义网络，则网络四元组才能生效
+	if requestedIP != "" && defaultRoute != "" && mask != "" && nic != "" &&
+		(networkMode == "default" || networkMode == "bridge" || networkMode == nwName) {
 		//create network if not exist
 		networkLock.Lock()
 		defer networkLock.Unlock()

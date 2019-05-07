@@ -37,6 +37,11 @@ func updateNetworkEnv(createConfig *apitypes.ContainerCreateConfig, meta *crityp
 		return nil
 	}
 
+	// skip nil network mode
+	if createConfig.HostConfig.NetworkMode == "" {
+		return nil
+	}
+
 	// skip sandbox pod is host mode.
 	nsOpts := meta.Config.GetLinux().GetSecurityContext().GetNamespaceOptions()
 	hostNet := nsOpts.GetNetwork() == runtime.NamespaceMode_NODE

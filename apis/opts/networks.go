@@ -124,7 +124,7 @@ func SetEndpointIPAddress(nwConfig *types.NetworkingConfig, mode, ipv4, ipv6 str
 		return nil
 	}
 
-	if nwConfig.EndpointsConfig != nil {
+	if nwConfig.EndpointsConfig == nil {
 		nwConfig.EndpointsConfig = make(map[string]*types.EndpointSettings)
 	}
 
