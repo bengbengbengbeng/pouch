@@ -269,6 +269,22 @@ func UniqueStringSlice(s []string) []string {
 	return res
 }
 
+// addEnvironment add pouch environment pouch_container_image and pouch_container_id
+func addEnvironment(image, id string, env []string) []string {
+	var res []string
+	for _, v := range env {
+		if strings.Contains(v, "pouch_container_image=") || strings.Contains(v, "pouch_container_id=") {
+			continue
+		}
+		res = append(res, v)
+	}
+
+	pouchContainerImage := fmt.Sprintf("pouch_container_image=%s", image)
+	res = append(res, pouchContainerImage)
+	pouchContainerID := fmt.Sprintf("pouch_container_id=%s", id)
+	return append(res, pouchContainerID)
+}
+
 // isCopyPodHostsOn verify whether container is set copyPodHosts
 func isCopyPodHostsOn(config *types.ContainerConfig, hostConfig *types.HostConfig) bool {
 	if mgr.IsHost(hostConfig.NetworkMode) {
