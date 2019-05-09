@@ -969,13 +969,11 @@ func (mgr *ContainerManager) Restart(ctx context.Context, name string, timeout i
 	// through containerPlugin in Create function
 	ctx = ctrd.WithSnapshotter(ctx, c.Config.Snapshotter)
 
-	if c.IsRunningOrPaused() {
-		// stop container if it is running or paused.
-		if err := mgr.stop(ctx, c, timeout); err != nil {
-			ex := fmt.Errorf("failed to stop container %s when restarting: %v", c.ID, err)
-			logrus.Errorf(ex.Error())
-			return ex
-		}
+	// stop container if it is running or paused.
+	if err := mgr.stop(ctx, c, timeout); err != nil {
+		ex := fmt.Errorf("failed to stop container %s when restarting: %v", c.ID, err)
+		logrus.Errorf(ex.Error())
+		return ex
 	}
 
 	logrus.Debugf("start container %s when restarting", c.ID)
@@ -1331,7 +1329,7 @@ func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *t
 	mgr.cache.Remove(c.ID)
 	// remove the container IO
 	mgr.IOs.Remove(c.ID)
-	c.State.Dead = true
+	c.SetStatusDead()
 
 	// remove meta.json for container in local disk
 	if err := mgr.Store.Remove(c.Key()); err != nil {

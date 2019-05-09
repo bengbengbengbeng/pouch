@@ -9,12 +9,13 @@ import (
 
 // IsRunning returns container is running or not.
 func (c *Container) IsRunning() bool {
-	return c.State.Running
+	return c.State.Status == types.StatusRunning
 }
 
 // IsRunningOrPaused returns true of container is running or paused.
 func (c *Container) IsRunningOrPaused() bool {
-	return c.State.Running || c.State.Paused
+	return c.State.Status == types.StatusRunning ||
+		c.State.Status == types.StatusPaused
 }
 
 // ExitCode returns container's ExitCode.
@@ -84,6 +85,12 @@ func (c *Container) SetStatusPaused() {
 func (c *Container) SetStatusUnpaused() {
 	c.State.Status = types.StatusRunning
 	c.setStatusFlags(types.StatusRunning)
+}
+
+// SetStatusDead sets a container to be status dead.
+func (c *Container) SetStatusDead() {
+	c.State.Status = types.StatusDead
+	c.setStatusFlags(types.StatusDead)
 }
 
 // SetStatusOOM sets a container to be status exit because of OOM.
