@@ -169,14 +169,21 @@ func toLinuxResources(resources types.Resources) (*specs.LinuxResources, error) 
 		Mems:   resources.CpusetMems,
 		Shares: &shares,
 		Period: &period,
-		Quota:  &resources.CPUQuota,
+	}
+	if resources.CPUQuota >= 0 {
+		r.CPU.Quota = &resources.CPUQuota
 	}
 
 	// toLinuxMemory
-	r.Memory = &specs.LinuxMemory{
-		Limit:       &resources.Memory,
-		Swap:        &resources.MemorySwap,
-		Reservation: &resources.MemoryReservation,
+	r.Memory = &specs.LinuxMemory{}
+	if resources.Memory > 0 {
+		r.Memory.Limit = &resources.Memory
+	}
+	if resources.MemorySwap > 0 {
+		r.Memory.Swap = &resources.MemorySwap
+	}
+	if resources.MemoryReservation > 0 {
+		r.Memory.Reservation = &resources.MemoryReservation
 	}
 
 	// TODO: add more fields.
