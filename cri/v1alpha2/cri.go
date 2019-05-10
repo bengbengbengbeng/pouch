@@ -276,6 +276,11 @@ func (c *CriManager) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 		if err := c.setupPodNetwork(id, sandboxMeta.NetNS, config); err != nil {
 			return nil, err
 		}
+
+		if ip, err := c.CniMgr.GetPodNetworkStatus(sandboxMeta.NetNS); err == nil {
+			sandboxMeta.IP = ip
+		}
+
 		defer func() {
 			if retErr != nil {
 				if err := c.teardownNetwork(id, sandboxMeta.NetNS, config); err != nil {
@@ -612,12 +617,16 @@ func (c *CriManager) PodSandboxStatus(ctx context.Context, r *runtime.PodSandbox
 		ip, err = c.CniMgr.GetPodNetworkStatus(containerNetns(sandbox))
 		if err != nil {
 			// Maybe the pod has been stopped.
-			logrus.Warnf("failed to get ip of sandbox %q: %v", podSandboxID, err)
+			logrus.Warnf("failed to get ip from %s of sandbox %q: %v", containerNetns(sandbox), podSandboxID, err)
 		}
-	}
 
-	if v, exist := annotations[passthruKey]; exist && v == "true" {
-		ip = annotations[passthruIP]
+		if v, exist := annotations[passthruKey]; exist && v == "true" {
+			ip = annotations[passthruIP]
+		}
+
+		if ip == "" && sandbox.HostConfig.Runtime != "" && sandbox.HostConfig.Runtime != "runc" {
+			ip = sandboxMeta.IP
+		}
 	}
 
 	status := &runtime.PodSandboxStatus{

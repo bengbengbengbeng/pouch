@@ -20,6 +20,9 @@ type SandboxMeta struct {
 
 	// NetNS is the sandbox's network namespace
 	NetNS string
+
+	// IP is the cached IP address
+	IP string
 }
 
 // Key returns sandbox's id.
