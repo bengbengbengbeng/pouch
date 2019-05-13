@@ -11,10 +11,12 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/alibaba/pouch/pkg/exec"
 	"github.com/alibaba/pouch/pkg/kernel"
 	"github.com/alibaba/pouch/pkg/system"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -384,7 +386,7 @@ func getMountpoint(dir string) (string, error) {
 		return "", errors.Wrapf(err, "failed to read file(%s)", procMountFile)
 	}
 
-	devID, err := system.GetDevID(dir)
+	devID, err := getDevID(dir)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to get device id for dir(%s)", dir)
 	}
@@ -402,7 +404,7 @@ func getMountpoint(dir string) (string, error) {
 			continue
 		}
 
-		newDevID, err := system.GetDevID(parts[1])
+		newDevID, err := getDevID(parts[1])
 		if err != nil {
 			continue
 		}
@@ -438,7 +440,7 @@ func getMountpointFstype(dir string) (string, string, error) {
 		return "", "", errors.Wrapf(err, "failed to read file(%s)", procMountFile)
 	}
 
-	devID, err := system.GetDevID(dir)
+	devID, err := getDevID(dir)
 	if err != nil {
 		return "", "", errors.Wrapf(err, "failed to get device id for dir(%s)", dir)
 	}
@@ -454,7 +456,7 @@ func getMountpointFstype(dir string) (string, string, error) {
 			continue
 		}
 
-		newDevID, err := system.GetDevID(parts[1])
+		newDevID, err := getDevID(parts[1])
 		if err != nil {
 			continue
 		}
@@ -490,7 +492,7 @@ func setDevLimit(dir string, devID uint64) (uint64, error) {
 		return 0, errors.Wrapf(err, "failed to set device limit, dir(%s), devID(%d)", dir, devID)
 	}
 
-	newDevID, _ := system.GetDevID(mp)
+	newDevID, _ := getDevID(mp)
 	if newDevID != devID {
 		return 0, errors.Errorf("failed to set device limit, no such device id(%d), checked id(%d)",
 			devID, newDevID)
@@ -514,7 +516,7 @@ func setDevLimit(dir string, devID uint64) (uint64, error) {
 
 // checkDevLimit checks if the device on which the input dir lies has already been recorded in driver.
 func checkDevLimit(dir string, size uint64) error {
-	devID, err := system.GetDevID(dir)
+	devID, err := getDevID(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get device id, dir(%s)", dir)
 	}
@@ -536,4 +538,14 @@ func checkDevLimit(dir string, size uint64) error {
 	logrus.Debugf("succeeded in checkDevLimit (dir %s quota limit %v B) with size %v B", dir, limit, size)
 
 	return nil
+}
+
+func getDevID(dir string) (uint64, error) {
+	// call "stat <dir>" to ensure stat not timeout
+	_, _, _, err := exec.Run(time.Second*5, "stat", dir)
+	if err != nil {
+		return 0, err
+	}
+
+	return system.GetDevID(dir)
 }

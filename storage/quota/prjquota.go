@@ -12,9 +12,8 @@ import (
 
 	"github.com/alibaba/pouch/pkg/bytefmt"
 	"github.com/alibaba/pouch/pkg/exec"
-	"github.com/alibaba/pouch/pkg/system"
-	"github.com/pkg/errors"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,7 +40,7 @@ type PrjQuotaDriver struct {
 func (quota *PrjQuotaDriver) EnforceQuota(dir string) (string, error) {
 	logrus.Debugf("start project quota driver: (%s)", dir)
 
-	devID, err := system.GetDevID(dir)
+	devID, err := getDevID(dir)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to get device id for directory: (%s)", dir)
 	}
@@ -216,7 +215,12 @@ func (quota *PrjQuotaDriver) CheckMountpoint(devID uint64) (string, bool, string
 			continue
 		}
 
-		devID2, _ := system.GetDevID(parts[1])
+		// only check xfs/ext3/ext4 file system
+		if parts[2] != xfsFS && parts[2] != ext3FS && parts[2] != ext4FS {
+			continue
+		}
+
+		devID2, _ := getDevID(parts[1])
 		if devID != devID2 {
 			continue
 		}

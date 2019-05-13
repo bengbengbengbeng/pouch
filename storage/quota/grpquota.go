@@ -12,7 +12,6 @@ import (
 
 	"github.com/alibaba/pouch/pkg/bytefmt"
 	"github.com/alibaba/pouch/pkg/exec"
-	"github.com/alibaba/pouch/pkg/system"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -41,7 +40,7 @@ type GrpQuotaDriver struct {
 func (quota *GrpQuotaDriver) EnforceQuota(dir string) (string, error) {
 	logrus.Debugf("start group quota driver: (%s)", dir)
 
-	devID, err := system.GetDevID(dir)
+	devID, err := getDevID(dir)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to get deivce id for directory: (%s)", dir)
 	}
@@ -191,7 +190,12 @@ func (quota *GrpQuotaDriver) CheckMountpoint(devID uint64) (string, bool, string
 			continue
 		}
 
-		devID2, _ := system.GetDevID(parts[1])
+		// only check xfs/ext3/ext4 file system
+		if parts[2] != xfsFS && parts[2] != ext3FS && parts[2] != ext4FS {
+			continue
+		}
+
+		devID2, _ := getDevID(parts[1])
 		if devID != devID2 {
 			continue
 		}
@@ -342,7 +346,7 @@ func getVFSVersionAndQuotaFile(devID uint64) (string, string, error) {
 			continue
 		}
 
-		devID2, _ := system.GetDevID(parts[1])
+		devID2, _ := getDevID(parts[1])
 		if devID != devID2 {
 			continue
 		}
