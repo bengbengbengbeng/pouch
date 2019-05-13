@@ -7,6 +7,7 @@ import (
 	"github.com/alibaba/pouch/daemon/mgr"
 	"github.com/alibaba/pouch/network"
 	"github.com/alibaba/pouch/network/mode/bridge"
+	"github.com/alibaba/pouch/pkg/errtypes"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -61,7 +62,14 @@ func NetworkModeInit(ctx context.Context, config network.Config, manager mgr.Net
 	}
 
 	// init bridge network
-	if !config.BridgeConfig.DisableBridge {
+	if config.BridgeConfig.DisableBridge {
+		// remove original bridge network when set disable bridge.
+		if err := manager.Remove(ctx, "bridge"); err != nil {
+			if !errtypes.IsNotfound(err) {
+				return err
+			}
+		}
+	} else {
 		if err := bridge.New(ctx, config.BridgeConfig, manager); err != nil {
 			return errors.Wrapf(err, "failed to init bridge network")
 		}
