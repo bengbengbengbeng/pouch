@@ -753,8 +753,9 @@ func (c *CriManager) CreateContainer(ctx context.Context, r *runtime.CreateConta
 			QuotaID:        config.GetQuotaId(),
 		},
 		HostConfig: &apitypes.HostConfig{
-			Binds:     generateMountBindings(config.GetMounts()),
-			Resources: parseResourcesFromCRI(resources),
+			Binds:       generateMountBindings(config.GetMounts()),
+			Resources:   parseResourcesFromCRI(resources),
+			OomScoreAdj: resources.GetOomScoreAdj(),
 		},
 		NetworkingConfig: &apitypes.NetworkingConfig{},
 	}
@@ -1011,6 +1012,7 @@ func (c *CriManager) ContainerStatus(ctx context.Context, r *runtime.ContainerSt
 		QuotaId:     container.Config.QuotaID,
 		Envs:        parseEnvsFromPouch(container.Config.Env),
 	}
+	status.Resources.OomScoreAdj = container.HostConfig.OomScoreAdj
 
 	metrics.ContainerSuccessActionsCounter.WithLabelValues(label).Inc()
 
