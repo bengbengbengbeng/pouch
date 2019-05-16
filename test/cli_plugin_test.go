@@ -1446,3 +1446,18 @@ func (suite *PouchPluginSuite) TestRunWithRequestedIP(c *check.C) {
 
 	c.Assert(found, check.Equals, true)
 }
+
+// TestNoMountCgroup: -e no_mount_cgroup=true allow container not mount cgroup
+// but if init process is systemd, it won't take effect
+func (suite *PouchPluginSuite) TestNoMountCgroup(c *check.C) {
+	name := "TestNoMountCgroup"
+	res := command.PouchRun("run", "-d", "-e", "no_mount_cgroup=true", "--name", name, busyboxImage, "top")
+	defer DelContainerForceMultyTime(c, name)
+	res.Assert(c, icmd.Success)
+
+	res = command.PouchRun("exec", name, "sh", "-c", "ls /sys/fs/cgroup | wc -l").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
+
+	res = command.PouchRun("exec", name, "sh", "-c", "cat /proc/mounts | grep cgroup | wc -l").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
+}
