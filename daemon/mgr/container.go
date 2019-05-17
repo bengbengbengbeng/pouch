@@ -410,8 +410,8 @@ func (mgr *ContainerManager) Create(ctx context.Context, name string, config *ty
 		labels["home"] = config.Home
 	}
 
-	// set quota for qcow2
-	labels[qcow2Size] = config.DiskQuota[".*"]
+	// set quota for block device
+	labels[DiskQuota] = config.DiskQuota[".*"]
 
 	logrus.Infof("pouch labels(%+v)", labels)
 	snapID := id
