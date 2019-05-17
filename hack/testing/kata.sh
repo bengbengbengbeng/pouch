@@ -4,13 +4,19 @@
 # and image with vm needs
 integration::install_daishu() {
   # change network mode
-  sed -i 's/internetworking_model=\"enlightened"/internetworking_model=\"none\"/' /etc/kata-containers/configuration.toml
+  sed -i 's/internetworking_model=\"enlightened"/internetworking_model=\"none\"/' /etc/kata-containers/configuration.toml || true
 
   # install daishu
   # install daishu only in physical machine
   if dmesg | grep -q "Hypervisor detected";then
-	  return
+      return
   fi
+
+  if [ "$(rpm -q daishu)" != "" ];then
+	  rpm -e "$(rpm -q daishu)" || true
+  fi
+
+  yum update -b test -y daishu-runtime || true
 
   local qemu kernel image
   qemu=$(grep -A 10 "hypervisor.qemu" /etc/kata-containers/configuration.toml | grep "^path" | awk -F\" '{print $2}')
@@ -18,9 +24,9 @@ integration::install_daishu() {
   image=$(grep -A 10 "hypervisor.qemu" /etc/kata-containers/configuration.toml | grep "^image" | awk -F\" '{print $2}')
 
   if [ -f "$qemu" ] && [ -f "$kernel" ] && [ -f "$image" ];then
-	  return
+      return
   fi
 
   echo "install daishu package"
-  yum install -b current -y daishu
+  yum install -b test -y daishu-containers-image daishu-linux-container daishu-qemu
 }
