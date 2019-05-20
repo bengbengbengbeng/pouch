@@ -4,7 +4,6 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 source utils.sh
-source kata.sh
 
 readonly REPO_BASE="$(cd ../../ && pwd -P)"
 
@@ -68,9 +67,6 @@ main() {
 
   integration::stop_mount_lxcfs
   integration::run_mount_lxcfs_background
-
-  # install daishu to run kata releated test
-  integration::install_daishu
 
   integration::stop_pouchd
   integration::run_pouchd_background "${cmd}" "${flags}" "${pouchd_log}"
