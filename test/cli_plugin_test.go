@@ -1461,3 +1461,48 @@ func (suite *PouchPluginSuite) TestNoMountCgroup(c *check.C) {
 	res = command.PouchRun("exec", name, "sh", "-c", "cat /proc/mounts | grep cgroup | wc -l").Assert(c, icmd.Success)
 	c.Assert(util.PartialEqual(res.Stdout(), "0\n"), check.IsNil)
 }
+
+// TestHostname test container get correct hostname
+func (suite *PouchPluginSuite) TestHostname(c *check.C) {
+	for _, t := range []struct {
+		name string
+		env  string
+	}{
+		{
+			name: "TestHostnameNormalMode-1",
+			env:  "TEST_HOSTNAME=test",
+		},
+		{
+			name: "TestHostnameNormalMode-2",
+			env:  "TEST HOSTNAME=test",
+		},
+	} {
+		res := command.PouchRun("run", "-d", "-e", t.env, "--hostname", "IAmHostname", "--name", t.name, alios7u)
+		defer DelContainerForceMultyTime(c, t.name)
+		res.Assert(c, icmd.Success)
+
+		res = command.PouchRun("exec", t.name, "hostname").Assert(c, icmd.Success)
+		c.Assert(util.PartialEqual(res.Stdout(), "IAmHostname"), check.IsNil)
+	}
+
+	for _, t := range []struct {
+		name string
+		env  string
+	}{
+		{
+			name: "TestHostnameVMMode-1",
+			env:  "TEST_HOSTNAME=test",
+		},
+		{
+			name: "TestHostnameVMMode-2",
+			env:  "TEST HOSTNAME=test",
+		},
+	} {
+		res := command.PouchRun("run", "-d", "-e", t.env, "-e", "ali_run_mode=vm", "--hostname", "IAmHostname", "--name", t.name, alios7u)
+		defer DelContainerForceMultyTime(c, t.name)
+		res.Assert(c, icmd.Success)
+
+		res = command.PouchRun("exec", t.name, "hostname").Assert(c, icmd.Success)
+		c.Assert(util.PartialEqual(res.Stdout(), "IAmHostname"), check.IsNil)
+	}
+}
