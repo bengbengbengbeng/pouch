@@ -289,6 +289,8 @@ func (c *Client) recoverContainer(ctx context.Context, id string, io *containeri
 
 	lc, err := wrapperCli.client.LoadContainer(ctx, id)
 	if err != nil {
+		logrus.WithField("container", id).Errorf("failed to load container from containerd: %v", err)
+
 		if errdefs.IsNotFound(err) {
 			return errors.Wrapf(errtypes.ErrNotfound, "container %s", id)
 		}
@@ -320,6 +322,8 @@ func (c *Client) recoverContainer(ctx context.Context, id string, io *containeri
 	}
 
 	if err != nil {
+		logrus.WithField("container", id).Errorf("failed to get task from containerd: %v", err)
+
 		if !errdefs.IsNotFound(err) {
 			return errors.Wrap(err, "failed to get task")
 		}
@@ -405,6 +409,7 @@ func (c *Client) destroyContainer(ctx context.Context, id string, timeout int64)
 	msg = waitExit()
 
 	if err := msg.RawError(); err != nil && errtypes.IsTimeout(err) {
+		logrus.WithField("container", id).Infof("send signal 9 to container")
 		// timeout, use SIGKILL to retry.
 		if err := pack.task.Kill(ctx, syscall.SIGKILL, containerd.WithKillAll); err != nil {
 			if !errdefs.IsNotFound(err) {
