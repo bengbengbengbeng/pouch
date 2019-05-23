@@ -52,6 +52,7 @@ func addCommonFlags(flagSet *pflag.FlagSet) *container {
 	// memory
 
 	flagSet.StringVarP(&c.memory, "memory", "m", "", "Memory limit")
+	flagSet.StringVar(&c.memoryReservation, "memory-reservation", "", "Memory soft limit")
 	flagSet.StringVar(&c.memorySwap, "memory-swap", "", "Swap limit equal to memory + swap, '-1' to enable unlimited swap")
 	flagSet.Int64Var(&c.memorySwappiness, "memory-swappiness", 0, "Container memory swappiness [0, 100]")
 	// for alikernel isolation options

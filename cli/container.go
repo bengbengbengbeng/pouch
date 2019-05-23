@@ -40,9 +40,11 @@ type container struct {
 	cpuperiod  int64
 	cpuquota   int64
 
-	memory           string
-	memorySwap       string
-	memorySwappiness int64
+	memory            string
+	memoryReservation string
+	memorySwap        string
+	memorySwappiness  int64
+	kernelMemory      string
 
 	memoryWmarkRatio    int64
 	memoryExtra         int64
@@ -110,7 +112,17 @@ func (c *container) config() (*types.ContainerCreateConfig, error) {
 		return nil, err
 	}
 
+	memoryReservation, err := opts.ParseMemoryReservation(c.memoryReservation)
+	if err != nil {
+		return nil, err
+	}
+
 	memorySwap, err := opts.ParseMemorySwap(c.memorySwap)
+	if err != nil {
+		return nil, err
+	}
+
+	kmemory, err := opts.ParseMemory(c.kernelMemory)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +243,12 @@ func (c *container) config() (*types.ContainerCreateConfig, error) {
 				CPUQuota:   c.cpuquota,
 
 				// memory
-				Memory:           memory,
-				MemorySwap:       memorySwap,
-				MemorySwappiness: &c.memorySwappiness,
+				Memory:            memory,
+				MemoryReservation: memoryReservation,
+				MemorySwap:        memorySwap,
+				MemorySwappiness:  &c.memorySwappiness,
+				KernelMemory:      kmemory,
+
 				// FIXME: validate in client side
 				MemoryWmarkRatio:    &c.memoryWmarkRatio,
 				MemoryExtra:         &c.memoryExtra,
