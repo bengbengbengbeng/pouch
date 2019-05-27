@@ -1341,7 +1341,7 @@ func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *t
 }
 
 func (mgr *ContainerManager) updateContainerDiskQuota(ctx context.Context, c *Container, diskQuota map[string]string) (err error) {
-	if diskQuota == nil {
+	if diskQuota == nil || len(diskQuota) == 0 {
 		return nil
 	}
 
