@@ -1493,10 +1493,6 @@ func (suite *PouchPluginSuite) TestHostname(c *check.C) {
 			name: "TestHostnameVMMode-1",
 			env:  "TEST_HOSTNAME=test",
 		},
-		{
-			name: "TestHostnameVMMode-2",
-			env:  "TEST HOSTNAME=test",
-		},
 	} {
 		res := command.PouchRun("run", "-d", "-e", t.env, "-e", "ali_run_mode=vm", "--hostname", "IAmHostname", "--name", t.name, alios7u)
 		defer DelContainerForceMultyTime(c, t.name)
