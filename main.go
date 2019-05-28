@@ -140,7 +140,7 @@ func setupFlags(cmd *cobra.Command) {
 
 	// registry
 	flagSet.StringArrayVar(&cfg.InsecureRegistries, "insecure-registries", []string{}, "enable insecure registry")
-	flagSet.StringArrayVar(&cfg.RegistryService.Mirrors, "registry-mirrors", []string{}, "preferred mirror registry list")
+	flagSet.StringArrayVar(&cfg.RegistryMirrors, "registry-mirrors", []string{}, "preferred mirror registry list")
 }
 
 // runDaemon prepares configs, setups essential details and runs pouchd daemon.

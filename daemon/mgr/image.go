@@ -101,8 +101,8 @@ type ImageManager struct {
 	// DefaultNamespace is the default namespace used in DefaultRegistry.
 	DefaultNamespace string
 
-	// RegistryServiceConfig is some config related to image registry.
-	RegistryServiceConfig types.RegistryServiceConfig
+	// RegistryMirrors is a list of registry URLs that act as a mirror for the default registry.
+	RegistryMirrors []string
 
 	// client is a interface to the containerd client.
 	// It is used to interact with containerd.
@@ -126,9 +126,9 @@ func NewImageManager(cfg *config.Config, client ctrd.APIClient, eventsService *e
 	}
 
 	mgr := &ImageManager{
-		DefaultRegistry:       cfg.DefaultRegistry,
-		DefaultNamespace:      cfg.DefaultRegistryNS,
-		RegistryServiceConfig: cfg.RegistryService,
+		DefaultRegistry:  cfg.DefaultRegistry,
+		DefaultNamespace: cfg.DefaultRegistryNS,
+		RegistryMirrors:  cfg.RegistryMirrors,
 
 		client:        client,
 		localStore:    store,
@@ -163,7 +163,7 @@ func (mgr *ImageManager) LookupImageReferences(ref string) []string {
 
 	// if the domain field is empty, concat the ref with registry mirror urls.
 	if registry == "" {
-		for _, reg := range mgr.RegistryServiceConfig.Mirrors {
+		for _, reg := range mgr.RegistryMirrors {
 			fullRefs = append(fullRefs, path.Join(reg, ref))
 		}
 		registry = mgr.DefaultRegistry
