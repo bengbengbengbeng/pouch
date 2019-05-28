@@ -689,6 +689,14 @@ func (mgr *ContainerManager) start(ctx context.Context, c *Container, options *t
 		return err
 	}
 
+	if c.MountFS == "" {
+		mgr.setMountFS(ctx, c)
+	}
+	// create/recreate mtab file
+	if err = mgr.setMountTab(ctx, c); err != nil {
+		return errors.Wrapf(err, "failed to set mount tab(%s)", c.ID)
+	}
+
 	if err = mgr.createContainerdContainer(ctx, c, options.CheckpointDir, options.CheckpointID); err != nil {
 		return errors.Wrapf(err, "failed to create container(%s) on containerd", c.ID)
 	}

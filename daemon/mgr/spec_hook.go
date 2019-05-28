@@ -2,6 +2,8 @@ package mgr
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -50,6 +52,16 @@ func setupHook(ctx context.Context, c *Container, specWrapper *SpecWrapper) erro
 	// set nvidia config
 	if err := setNvidiaHook(c, specWrapper); err != nil {
 		return errors.Wrap(err, "failed to set nvidia prestart hook")
+	}
+
+	hostMtabPath := filepath.Join(specWrapper.ctrMgr.(*ContainerManager).Store.BaseDir, c.ID, "rootfs/etc/mtab")
+	if _, err := os.Stat(hostMtabPath); err == nil {
+		mtabPath := filepath.Join(c.BaseFS, "etc/mtab")
+		mtabPrestart := specs.Hook{
+			Path: "/bin/cp",
+			Args: []string{"-f", "--remove-destination", hostMtabPath, mtabPath},
+		}
+		s.Hooks.Prestart = append(s.Hooks.Prestart, mtabPrestart)
 	}
 
 	return nil
