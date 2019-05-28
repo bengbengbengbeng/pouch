@@ -141,10 +141,10 @@
 			"revisionTime": "2017-09-25T15:48:32Z"
 		},
 		{
-			"checksumSHA1": "K6ANZ20PYqz+yUP+LruUQAK/h4E=",
+			"checksumSHA1": "CJ7Lrxau48QyZleQR30pXjtjn1s=",
 			"path": "github.com/containerd/containerd",
-			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
-			"revisionTime": "2019-03-13T05:41:42Z",
+			"revision": "639713aa14dfd742a011429daaf2eaad5caeff71",
+			"revisionTime": "2019-05-08T03:19:23Z",
 			"version": "v1.2.5",
 			"versionExact": "v1.2.5"
 		},
@@ -389,10 +389,10 @@
 			"versionExact": "v1.2.5"
 		},
 		{
-			"checksumSHA1": "b+F1oGJ2JQxueWSSBZQ8fi9e69U=",
+			"checksumSHA1": "8jB/rwc6L069YQ4udxL/HnhksWo=",
 			"path": "github.com/containerd/containerd/images",
-			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
-			"revisionTime": "2019-03-13T05:41:42Z",
+			"revision": "639713aa14dfd742a011429daaf2eaad5caeff71",
+			"revisionTime": "2019-05-08T03:19:23Z",
 			"version": "v1.2.5",
 			"versionExact": "v1.2.5"
 		},
@@ -565,18 +565,18 @@
 			"versionExact": "v1.2.5"
 		},
 		{
-			"checksumSHA1": "o74THeRTaFhzo/NUKi8m5G3NHCM=",
+			"checksumSHA1": "OiMYOGi9lBV+q7ysGrfGzp6oiAQ=",
 			"path": "github.com/containerd/containerd/runtime/linux/runctypes",
-			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
-			"revisionTime": "2019-03-13T05:41:42Z",
+			"revision": "639713aa14dfd742a011429daaf2eaad5caeff71",
+			"revisionTime": "2019-05-08T03:19:23Z",
 			"version": "v1.2.5",
 			"versionExact": "v1.2.5"
 		},
 		{
-			"checksumSHA1": "w7ldsP68azUNYnbqSI0d0MxKSeQ=",
+			"checksumSHA1": "k7vxVBCYVn7Az0XkFIF/HaUzDBg=",
 			"path": "github.com/containerd/containerd/runtime/v2/runc/options",
-			"revision": "bb71b10fd8f58240ca47fbb579b9d1028eea7c84",
-			"revisionTime": "2019-03-13T05:41:42Z",
+			"revision": "639713aa14dfd742a011429daaf2eaad5caeff71",
+			"revisionTime": "2019-05-08T03:19:23Z",
 			"version": "v1.2.5",
 			"versionExact": "v1.2.5"
 		},
