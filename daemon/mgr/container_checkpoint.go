@@ -77,7 +77,7 @@ func (mgr *ContainerManager) CreateCheckpoint(ctx context.Context, name string, 
 		}
 	}()
 
-	if err := mgr.Client.CreateCheckpoint(ctx, c.ID, dir, options.Exit); err != nil {
+	if err := mgr.Client.CreateCheckpoint(ctx, c.HostConfig.RuntimeType, c.ID, dir, options.Exit); err != nil {
 		return err
 	}
 

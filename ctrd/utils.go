@@ -1,6 +1,7 @@
 package ctrd
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -16,15 +17,61 @@ import (
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
+	"github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func withExitShimV1CheckpointTaskOpts() containerd.CheckpointTaskOpts {
+func withCheckpointOpts(runtime, imagePath string, exit bool) containerd.CheckpointTaskOpts {
 	return func(r *containerd.CheckpointTaskInfo) error {
-		r.Options = &runctypes.CheckpointOptions{
-			Exit: true,
+		switch runtime {
+		case RuntimeTypeV2runcV1:
+			if r.Options == nil {
+				r.Options = &options.CheckpointOptions{}
+			}
+			opts, _ := r.Options.(*options.CheckpointOptions)
+
+			opts.Exit = exit
+			opts.ImagePath = imagePath
+			opts.WorkPath = imagePath
+		case RuntimeTypeV1:
+			if r.Options == nil {
+				r.Options = &runctypes.CheckpointOptions{}
+			}
+			opts, _ := r.Options.(*runctypes.CheckpointOptions)
+
+			opts.Exit = exit
+			opts.ImagePath = imagePath
+			opts.WorkPath = imagePath
+		}
+		return nil
+	}
+}
+
+func withRestoreOpts(runtime, imagePath string) containerd.NewTaskOpts {
+	return func(_ context.Context, _ *containerd.Client, t *containerd.TaskInfo) error {
+		switch runtime {
+		case RuntimeTypeV2runcV1:
+			if t.Options == nil {
+				t.Options = &options.Options{}
+			}
+			opts, ok := t.Options.(*options.Options)
+			if !ok {
+				return errors.New("invalid v2 shim create options format")
+			}
+			opts.CriuImagePath = imagePath
+			opts.CriuWorkPath = imagePath
+		case RuntimeTypeV1:
+			if t.Options == nil {
+				t.Options = &runctypes.CreateOptions{}
+			}
+			opts, ok := t.Options.(*runctypes.CreateOptions)
+			if !ok {
+				return errors.New("invalid v1 shim create options format")
+			}
+			opts.CriuImagePath = imagePath
+			opts.CriuWorkPath = imagePath
 		}
 		return nil
 	}

@@ -112,5 +112,5 @@ type SnapshotAPIClient interface {
 	// it will be set to current snapshotter. For each snapshot, the function will be called.
 	WalkSnapshot(ctx context.Context, snapshotter string, fn func(context.Context, snapshots.Info) error) error
 	// CreateCheckpoint creates a checkpoint from a running container
-	CreateCheckpoint(ctx context.Context, id string, checkpointDir string, exit bool) error
+	CreateCheckpoint(ctx context.Context, runtime, id string, checkpointDir string, exit bool) error
 }
