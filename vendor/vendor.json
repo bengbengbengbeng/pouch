@@ -772,6 +772,18 @@
 			"revisionTime": "2018-01-31T23:13:00Z"
 		},
 		{
+			"checksumSHA1": "u+plsrJuRfw8vmIB82eQz9p+31I=",
+			"path": "github.com/docker/docker/pkg/archive",
+			"revision": "784bd2c883342c75a10c68d489d2de80fc50cb54",
+			"revisionTime": "2019-06-02T19:56:15Z"
+		},
+		{
+			"checksumSHA1": "l+Cj+KvNrFIn93JBWTwlpVwzkcE=",
+			"path": "github.com/docker/docker/pkg/chrootarchive",
+			"revision": "da823cf3a5a3437763ba12b2fa369c826d4a2bf4",
+			"revisionTime": "2019-03-27T06:32:23Z"
+		},
+		{
 			"checksumSHA1": "jhniGMHY8Ze6TvmbKnzuCosOVN8=",
 			"path": "github.com/docker/docker/pkg/discovery",
 			"revision": "fd2f2a919e392b96de74795ae9af2dc5e510bc4c",
@@ -782,6 +794,18 @@
 			"path": "github.com/docker/docker/pkg/discovery/kv",
 			"revision": "fd2f2a919e392b96de74795ae9af2dc5e510bc4c",
 			"revisionTime": "2018-06-06T04:43:31Z"
+		},
+		{
+			"checksumSHA1": "eMoRb/diYeuYLojU7ChN5DaETHc=",
+			"path": "github.com/docker/docker/pkg/fileutils",
+			"revision": "784bd2c883342c75a10c68d489d2de80fc50cb54",
+			"revisionTime": "2019-06-02T19:56:15Z"
+		},
+		{
+			"checksumSHA1": "+Ir5nXNDvy3cwbTlBh06lR7zUrI=",
+			"path": "github.com/docker/docker/pkg/idtools",
+			"revision": "784bd2c883342c75a10c68d489d2de80fc50cb54",
+			"revisionTime": "2019-06-02T19:56:15Z"
 		},
 		{
 			"checksumSHA1": "Ybq78CnAoQWVBk+lkh3zykmcSjs=",
@@ -830,6 +854,12 @@
 			"path": "github.com/docker/docker/pkg/plugins/transport",
 			"revision": "fd2f2a919e392b96de74795ae9af2dc5e510bc4c",
 			"revisionTime": "2018-06-06T04:43:31Z"
+		},
+		{
+			"checksumSHA1": "dj8atalGWftfM9vdzCsh9YF1Seg=",
+			"path": "github.com/docker/docker/pkg/pools",
+			"revision": "784bd2c883342c75a10c68d489d2de80fc50cb54",
+			"revisionTime": "2019-06-02T19:56:15Z"
 		},
 		{
 			"checksumSHA1": "UNeFR/6q9MFAwCoghqObaqfU284=",
