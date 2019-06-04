@@ -6,7 +6,6 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 source "./check.sh"
 cd -
 
-CRITEST_BRANCH_v1alpha1=release-1.9
 CRITEST_BRANCH_DEFAULT=release-1.12
 
 # keep the first one only
@@ -36,8 +35,7 @@ critest::check_version() {
 
 # critest::install downloads the package and build.
 critest::install() {
-  local workdir pkg cri_runtime CRITOOLS_REPO
-  cri_runtime=$1
+  local workdir pkg CRITOOLS_REPO
 
   pkg="github.com/kubernetes-sigs/cri-tools"
   CRITOOLS_REPO="github.com/alibaba/cri-tools"
@@ -51,11 +49,7 @@ critest::install() {
 
   cd "${workdir}"
   git fetch --all
-  if [[ "${cri_runtime}" == "v1alpha1" ]]; then
-      git checkout "${CRITEST_BRANCH_v1alpha1}"
-  else
-      git checkout "${CRITEST_BRANCH_DEFAULT}"
-  fi
+  git checkout "${CRITEST_BRANCH_DEFAULT}"
   make
   cd -
 }
@@ -79,15 +73,9 @@ main() {
   critest::install_ginkgo
   critest::install_socat
 
-  local cri_runtime has_installed
-  cri_runtime=$1
+  local has_installed
 
-  if [[ "${cri_runtime}" == "v1alpha1" ]]; then
-      CRITEST_VERSION="1.0.0-alpha.0"
-  else
-      CRITEST_VERSION="1.0.0-beta.0"
-  fi
-
+  CRITEST_VERSION="1.0.0-beta.0"
   has_installed="$(critest::check_version)"
   if [[ "${has_installed}" = "true" ]]; then
     echo "critest-${CRITEST_VERSION} has been installed."
@@ -95,9 +83,9 @@ main() {
   fi
 
   echo ">>>> install critest-${CRITEST_VERSION} <<<<"
-  critest::install "${cri_runtime}"
+  critest::install
 
   command -v critest > /dev/null
 }
 
-main "$@"
+main
