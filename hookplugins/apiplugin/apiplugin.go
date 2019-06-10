@@ -27,6 +27,9 @@ func (a *apiPlugin) UpdateHandler(handlers []*types.HandlerSpec) []*types.Handle
 		// host
 		{Method: http.MethodGet, Path: "/host/exec/result", HandlerFunc: HostExecResultHandler},
 		{Method: http.MethodPost, Path: "/host/exec", HandlerFunc: HostExecHandler},
+
+		// network
+		{Method: http.MethodPost, Path: "/networks/extend", HandlerFunc: NetworkExtendHandler},
 	}
 
 	handlers = append(handlers, extraHandlers...)

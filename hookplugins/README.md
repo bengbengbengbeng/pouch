@@ -192,6 +192,27 @@ DefaultRoute
 
 - /host/exec
 - /host/exec/result
+- /networks/extend
+
+#### /networks/extend 网络插件的扩展接口
+
+提供可操作alinet网络插件的扩展接口，将请求的中的body透传到alinet中，alinet进行操作后，将response回透传给调用者
+body内容由apiserver和alinet维护，pouch紧紧做透传操作。
+
+pouch提供的可选api path
+
+```
+POST /networks/extend
+POST /v1.24/networks/extend
+```
+
+操作alinet的http接口为
+
+```
+POST /extend
+```
+
+>注： 该功能仅仅提供给sigma2.0中对容器网卡操作的扩展接口，后续ASI体系下该接口会下线
 
 ### Hook
 
