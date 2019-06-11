@@ -153,6 +153,12 @@ func (c *CniManager) TearDownPodNetwork(podNetwork *ocicni.PodNetwork) error {
 
 // GetPodNetworkStatus is the method called to obtain the ipv4 or ipv6 addresses of the pod sandbox.
 func (c *CniManager) GetPodNetworkStatus(netnsPath string) (string, error) {
+	var (
+		ipv4      string
+		ipv6      string
+		ipAddress string
+	)
+
 	// TODO: we need more validation tests.
 	podNetwork := ocicni.PodNetwork{
 		NetNS: netnsPath,
@@ -168,17 +174,35 @@ func (c *CniManager) GetPodNetworkStatus(netnsPath string) (string, error) {
 		return "", fmt.Errorf("failed to get pod network status for nil result")
 	}
 
-	result, ok := results[0].(*cnicurrent.Result)
+	cniResult, ok := results[0].(*cnicurrent.Result)
 	if !ok {
 		return "", fmt.Errorf("failed to get pod network status for wrong result: %+v", results[0])
 	}
 
-	if len(result.IPs) == 0 {
+	if len(cniResult.IPs) == 0 {
 		return "", fmt.Errorf("failed to get pod network status for nil IP")
 	}
 
-	ip := result.IPs[0].Address.IP.String()
-	return ip, nil
+	for _, ip := range cniResult.IPs {
+		switch ip.Version {
+		case "4":
+			ipv4 = ip.Address.IP.String()
+		case "6":
+			ipv6 = ip.Address.IP.String()
+		}
+	}
+
+	if ipv4 != "" && ipv6 != "" {
+		ipAddress = ipv4 + ";" + ipv6
+	} else if ipv4 != "" {
+		ipAddress = ipv4
+	} else if ipv6 != "" {
+		ipAddress = ipv6
+	} else {
+		return "", fmt.Errorf("failed to get pod network status for nil IP")
+	}
+
+	return ipAddress, nil
 }
 
 // Status returns error if the network plugin is in error state.
