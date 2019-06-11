@@ -1502,3 +1502,32 @@ func (suite *PouchPluginSuite) TestHostname(c *check.C) {
 		c.Assert(util.PartialEqual(res.Stdout(), "IAmHostname"), check.IsNil)
 	}
 }
+
+// TestMtab tests /etc/mtab should create every container start, we use /dev/hugepages/ mount
+// systemd will mount /dev/hugepages if kernel support, actually we support here, so we test
+// run/start/restart, every case should have /dev/hugepages exist and mount tab in /etc/mtab
+func (suite *PouchPluginSuite) TestMtab(c *check.C) {
+	name := "TestMtab"
+	res := command.PouchRun("run", "-d", "-e", "ali_run_mode=vm", "--name", name, alios7u)
+	defer DelContainerForceMultyTime(c, name)
+	res.Assert(c, icmd.Success)
+
+	command.PouchRun("exec", name, "ls", "/dev/hugepages").Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/etc/mtab").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "hugepages"), check.IsNil)
+
+	// stop and start container
+	command.PouchRun("stop", name).Assert(c, icmd.Success)
+	command.PouchRun("start", name).Assert(c, icmd.Success)
+
+	command.PouchRun("exec", name, "ls", "/dev/hugepages").Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/etc/mtab").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "hugepages"), check.IsNil)
+
+	// restart container
+	command.PouchRun("restart", name).Assert(c, icmd.Success)
+
+	command.PouchRun("exec", name, "ls", "/dev/hugepages").Assert(c, icmd.Success)
+	res = command.PouchRun("exec", name, "cat", "/etc/mtab").Assert(c, icmd.Success)
+	c.Assert(util.PartialEqual(res.Stdout(), "hugepages"), check.IsNil)
+}
