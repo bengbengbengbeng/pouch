@@ -31,7 +31,13 @@ integration::run_daemon_test_cases() {
   set +e
   pushd "${REPO_BASE}/test"
   local testcases
-  testcases=$(cat "${REPO_BASE}/test/testcase.list.${job_id}")
+  if grep -q "^ID=\"alios\"$" /etc/os-release; then
+    testcases=$(cat "${REPO_BASE}/test/testcase.{common,alios}")
+    echo "start to run common test cases and alios specified cases"
+  else
+    testcases=$(cat "${REPO_BASE}/test/testcase.common")
+    echo "start to run common test cases"
+  fi
   for one in ${testcases}; do
     "${REPO_BASE}/bin/pouchd-integration-test" -test.v -check.v -check.f "${one}"
     ret=$?
