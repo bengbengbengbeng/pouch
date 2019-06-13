@@ -34,4 +34,10 @@ const (
 
 	// MemorySwapExtendAnnotation is the extend annotation of memory swap
 	MemorySwapExtendAnnotation = "io.alibaba.pouch.resources.memory-swap"
+
+	// CNIBandwidthIngress is the desired incoming bandwidth rate limits in bps.
+	CNIBandwidthIngress = "kubernetes.io/ingress-bandwidth"
+
+	// CNIBandwidthEgress is the desired outgoing bandwidth rate limits in bps.
+	CNIBandwidthEgress = "kubernetes.io/egress-bandwidth"
 )

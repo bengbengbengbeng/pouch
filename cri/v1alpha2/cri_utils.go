@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -30,6 +31,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func toStreamConfig(cfg *config.Config) (stream.Config, error) {
@@ -586,35 +588,68 @@ func setupSandboxFiles(sandboxRootDir string, config *runtime.PodSandboxConfig) 
 }
 
 // setupPodNetwork sets up the network of PodSandbox
-// and do nothing when networkNamespaceMode equals runtime.NamespaceMode_NODE.
 func (c *CriManager) setupPodNetwork(id, netnsPath string, config *runtime.PodSandboxConfig) error {
-	return c.CniMgr.SetUpPodNetwork(&ocicni.PodNetwork{
-		Name:      config.GetMetadata().GetName(),
-		Namespace: config.GetMetadata().GetNamespace(),
-		ID:        id,
-		NetNS:     netnsPath,
-		RuntimeConfig: map[string]ocicni.RuntimeConfig{
-			c.CniMgr.GetDefaultNetworkName(): {
-				PortMappings: toCNIPortMappings(config.GetPortMappings()),
-			},
-		},
-	})
+	conf, err := c.buildPodNetworkConf(id, netnsPath, config)
+	if err != nil {
+		return err
+	}
+
+	return c.CniMgr.SetUpPodNetwork(conf)
 }
 
 // teardownNetwork teardown the network of PodSandbox.
-// and do nothing when networkNamespaceMode equals runtime.NamespaceMode_NODE.
 func (c *CriManager) teardownNetwork(id, netnsPath string, config *runtime.PodSandboxConfig) error {
-	return c.CniMgr.TearDownPodNetwork(&ocicni.PodNetwork{
-		Name:      config.GetMetadata().GetName(),
-		Namespace: config.GetMetadata().GetNamespace(),
-		ID:        id,
-		NetNS:     netnsPath,
-		RuntimeConfig: map[string]ocicni.RuntimeConfig{
-			c.CniMgr.GetDefaultNetworkName(): {
-				PortMappings: toCNIPortMappings(config.GetPortMappings()),
-			},
-		},
-	})
+	conf, err := c.buildPodNetworkConf(id, netnsPath, config)
+	if err != nil {
+		return err
+	}
+
+	return c.CniMgr.TearDownPodNetwork(conf)
+}
+
+func (c *CriManager) buildPodNetworkConf(id, netnsPath string, config *runtime.PodSandboxConfig) (*ocicni.PodNetwork, error) {
+	defaultNetworkName := c.CniMgr.GetDefaultNetworkName()
+	runtimeConfig := ocicni.RuntimeConfig{
+		PortMappings: toCNIPortMappings(config.GetPortMappings()),
+	}
+	conf := &ocicni.PodNetwork{
+		Name:          config.GetMetadata().GetName(),
+		Namespace:     config.GetMetadata().GetNamespace(),
+		ID:            id,
+		NetNS:         netnsPath,
+		RuntimeConfig: make(map[string]ocicni.RuntimeConfig),
+	}
+
+	// apply cni bandwidth annotation
+	// docs: https://github.com/containernetworking/cni/blob/master/CONVENTIONS.md
+	// eg.  kubernetes.io/ingress-bandwidth=10M      (10*1000*1000 bits per second)
+	//      kubernetes.io/ingress-bandwidth=10Mi     (10*1024*1024 bits per second)
+	if str, exists := config.Annotations[anno.CNIBandwidthIngress]; exists {
+		v, err := resource.ParseQuantity(str)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse annotation %s: %v", anno.CNIBandwidthIngress, err)
+		}
+		if runtimeConfig.Bandwidth == nil {
+			runtimeConfig.Bandwidth = &ocicni.BandwidthConfig{}
+		}
+		runtimeConfig.Bandwidth.IngressRate = uint64(v.Value())
+		runtimeConfig.Bandwidth.IngressBurst = math.MaxUint64
+	}
+	if str, exists := config.Annotations[anno.CNIBandwidthEgress]; exists {
+		v, err := resource.ParseQuantity(str)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse annotation %s: %v", anno.CNIBandwidthEgress, err)
+		}
+		if runtimeConfig.Bandwidth == nil {
+			runtimeConfig.Bandwidth = &ocicni.BandwidthConfig{}
+		}
+		runtimeConfig.Bandwidth.EgressRate = uint64(v.Value())
+		runtimeConfig.Bandwidth.EgressBurst = math.MaxUint64
+	}
+
+	conf.RuntimeConfig[defaultNetworkName] = runtimeConfig
+
+	return conf, nil
 }
 
 func sandboxNetworkMode(config *runtime.PodSandboxConfig) runtime.NamespaceMode {
