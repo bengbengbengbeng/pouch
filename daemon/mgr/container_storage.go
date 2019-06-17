@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/alibaba/pouch/apis/opts"
 	"github.com/alibaba/pouch/apis/types"
@@ -728,8 +729,17 @@ func (mgr *ContainerManager) Mount(ctx context.Context, c *Container) error {
 // Unmount unsets the container rootfs
 // cleanup decides whether to clean up the dir or not
 func (mgr *ContainerManager) Unmount(ctx context.Context, c *Container) error {
-	// TODO: if umount is failed, and how to deal it.
-	err := mount.Unmount(c.MountFS, 0)
+	var err error
+
+	// retry to umount rootfs when umount failed
+	for i := 0; i < 50; i++ {
+		err = mount.Unmount(c.MountFS, 0)
+		if err == nil {
+			break
+		}
+		logrus.Debugf("failed to umount container(%s)'s rootfs(%s), err(%v)", c.ID, c.MountFS, err)
+		time.Sleep(200 * time.Millisecond)
+	}
 	if err != nil {
 		return errors.Wrapf(err, "failed to umount mountfs(%s)", c.MountFS)
 	}
