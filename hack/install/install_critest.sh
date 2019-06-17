@@ -6,7 +6,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 source "./check.sh"
 cd -
 
-CRITEST_BRANCH_DEFAULT=release-1.12
+CRITEST_BRANCH_DEFAULT=master
 
 # keep the first one only
 GOPATH="${GOPATH%%:*}"
