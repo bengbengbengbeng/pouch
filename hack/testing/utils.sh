@@ -22,6 +22,13 @@ integration::stop_local_persist() {
 integration::run_mount_lxcfs_background() {
   echo "start mount lxcfs /var/lib/lxcfs..."
   lxcfs /var/lib/lxcfs 2>&1 &
+  local retry=30
+  while [[ ! -d /var/lib/lxcfs/cgroup ]] && [[ $retry -gt 0 ]];
+  do
+    sleep 0.1
+    echo "Wait for lxcfs mount point to be ready"
+    let retry--
+  done
 }
 
 # integration::stop_mount_lxcfs stop lxcfs mount.
