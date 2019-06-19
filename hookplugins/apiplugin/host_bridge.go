@@ -354,7 +354,7 @@ func clean() {
 		filepath.Walk("/tmp/exec", func(path string, info os.FileInfo, err error) error {
 			if err == nil {
 				if len(info.Name()) > 10 {
-					if time.Since(info.ModTime()) > time.Hour*48 {
+					if time.Since(info.ModTime()) > time.Hour*24*30 {
 						os.RemoveAll(path)
 					}
 				}
