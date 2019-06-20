@@ -60,6 +60,11 @@ type ExitStatus struct {
 	err      error
 }
 
+// IsChannelClosed means containerd break unexpected
+func (s ExitStatus) IsChannelClosed() bool {
+	return s.exitedAt.IsZero() && strings.Contains(s.err.Error(), "transport is closing")
+}
+
 // Result returns the exit code and time of the exit status.
 // An error may be returned here to which indicates there was an error
 //   at some point while waiting for the exit status. It does not signify

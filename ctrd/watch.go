@@ -78,9 +78,10 @@ func (w *watch) add(pack *containerPack) {
 		}
 
 		// isContainerdDead only take effect when contained stop normal, if containerd
-		// stop unexpected, judge exit time is zero, zero exit time means grpc connection
-		// is broken.
-		if status.ExitTime().IsZero() {
+		// stop unexpected, judge whether channel is broken, if does, skip this message,
+		// since task still running
+		if status.IsChannelClosed() {
+			logrus.Warnf("receive exit message since channel broken, %+v", status)
 			return
 		}
 
