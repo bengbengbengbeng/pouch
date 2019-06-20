@@ -2,10 +2,12 @@ package ctrd
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/alibaba/pouch/pkg/errtypes"
+	"github.com/containerd/containerd"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -57,6 +59,12 @@ func (w *watch) isContainerdDead() bool {
 	return w.containerdDead
 }
 
+// isChannelClosed means containerd break unexpected, all exit channel
+// ctrd watched will exit.
+func isChannelClosed(s containerd.ExitStatus) bool {
+	return s.ExitTime().IsZero() && strings.Contains(s.Error().Error(), "transport is closing")
+}
+
 func (w *watch) add(pack *containerPack) {
 	w.Lock()
 	defer w.Unlock()
@@ -78,9 +86,10 @@ func (w *watch) add(pack *containerPack) {
 		}
 
 		// isContainerdDead only take effect when contained stop normal, if containerd
-		// stop unexpected, judge exit time is zero, zero exit time means grpc connection
-		// is broken.
-		if status.ExitTime().IsZero() {
+		// stop unexpected, judge whether channel is broken, if does, skip this message,
+		// since task still running
+		if isChannelClosed(status) {
+			logrus.Warnf("receive exit message since channel broken, %+v", status)
 			return
 		}
 
