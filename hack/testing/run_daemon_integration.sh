@@ -33,7 +33,7 @@ integration::run_daemon_test_cases() {
   pushd "${REPO_BASE}/test"
   local testcases
   if grep -q "^ID=\"alios\"$" /etc/os-release; then
-    testcases=$(cat "${REPO_BASE}/test/testcase.{common,alios}")
+    testcases=$(cat "${REPO_BASE}/test/testcase."{common,alios})
     echo "start to run common test cases and alios specified cases"
   else
     testcases=$(cat "${REPO_BASE}/test/testcase.common")
