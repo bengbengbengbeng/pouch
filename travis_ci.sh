@@ -9,28 +9,10 @@ JOBS=$2
 # config the id of job
 JOB_ID=$3
 
-CASE_PREFIX="testcase.list"
-LOCAL_CASE_FILE="${TRAVIS_BUILD_DIR}/test/${CASE_PREFIX}"
-
 source "${TRAVIS_BUILD_DIR}/hack/install/config.sh"
 
 prepare_testcase() {
-  # get the number of all test case
-  # test case must write with this format:
-  # func (XXX) TestXXX(c *check.C) {
-  grep -h -E "^func\ \(.*\)\ Test.*\(c\ \*check\.C\)\ \{" ./test -r \
-    | awk '{print $3,$4}' | awk -F \( '{print $1}' \
-    | sed 's/\*//' | sed 's/) /./' > "${LOCAL_CASE_FILE}"
-
-  # make test case list file
-  local sum nums
-
-  # shellcheck disable=SC2002
-  sum=$(cat "${LOCAL_CASE_FILE}" | wc -l)
-  nums=$((sum / JOBS + 1))
-
-  rm -rf "${LOCAL_CASE_FILE}.*"
-  split -l ${nums} -d --suffix-length=1 "${LOCAL_CASE_FILE}" "${LOCAL_CASE_FILE}."
+  export concurrent=${JOBS}
 }
 
 run_pre_test() {
@@ -90,8 +72,7 @@ run_node_e2e_test() {
 
 check_port() {
 	# docker-containerd will use port 10010 in docker.service
-	sudo netstat -npl | grep -q "10010"
-	if [[ $? -ne 0 ]]; then
+	if ! sudo netstat -npl | grep -q "10010"; then
 		return
 	fi
 

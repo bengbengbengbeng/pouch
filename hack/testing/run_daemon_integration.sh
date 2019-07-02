@@ -24,23 +24,35 @@ rm -rf "${coverage_profile}"
 integration::run_daemon_test_cases() {
   echo "start pouch daemon integration test..."
   local code=0
+  local concurrent=${concurrent:-1}
   local job_id=$1
+  [[ $concurrent == 1 ]] && job_id=0
   local logfile=/tmp/test$$.log
-
   cp -rf "${REPO_BASE}/test/tls" /tmp/
-
   set +e
   pushd "${REPO_BASE}/test"
-  local testcases
+  local testcases total_case_num
   if grep -q "^ID=\"alios\"$" /etc/os-release; then
     testcases=$(cat "${REPO_BASE}/test/testcase."{common,alios})
+    total_case_num=$(cat "${REPO_BASE}/test/testcase."{common,alios} | wc -l)
     echo "start to run common test cases and alios specified cases"
   else
     testcases=$(cat "${REPO_BASE}/test/testcase.common")
+    # shellcheck disable=SC2002
+    total_case_num=$(cat "${REPO_BASE}/test/testcase.common" | wc -l)
     echo "start to run common test cases"
   fi
-  for one in ${testcases}; do
-    "${REPO_BASE}/bin/pouchd-integration-test" -test.v -check.v -check.f "${one}" 2>&1 | tee -a $logfile
+  local rest=$((total_case_num%concurrent))
+  local index_start=$(((total_case_num/concurrent)*job_id))
+  local index_end=$(((total_case_num/concurrent)*(job_id+1)-1))
+  [[ $job_id == $((concurrent-1)) ]] && index_end=$((index_end+rest))
+  # shellcheck disable=SC2206
+  local test_case_array=( $testcases )
+  local index=${index_start}
+  for ((;index<=index_end;index++));
+  do
+    "${REPO_BASE}/bin/pouchd-integration-test" -test.v -check.v -check.f \
+	    "${test_case_array[$index]}" 2>&1 | tee -a $logfile
     ret=$?
     if [[ ${ret} -ne 0 ]]; then
       code=${ret}
@@ -103,7 +115,7 @@ integration::run_daemon_test_cases() {
 
   if [[ "${code}" != "0" ]]; then
     echo "failed to pass integration cases!"
-    echo "there is daemon logs...."
+    echo "here is daemon logs...."
     cat "${pouchd_log}"
     exit ${code}
   fi
@@ -114,7 +126,9 @@ integration::run_daemon_test_cases() {
 
 main() {
   local cmd flags
-  local job_id=$1
+  # assign default value for job_id, if no params passed to this script
+  # will run all the test cases on this node
+  local job_id=${1:-0}
   cmd="pouchd-integration"
   flags=" -test.coverprofile=${coverage_profile} DEVEL"
   flags="${flags} --add-runtime runv=runv --add-runtime kata-runtime=kata-runtime"
