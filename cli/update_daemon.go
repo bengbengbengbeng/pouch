@@ -41,6 +41,8 @@ type DaemonUpdateCommand struct {
 	iptables         bool
 	ipforward        bool
 	userlandProxy    bool
+	logMaxFile       string
+	logMaxSize       string
 
 	homeDir     string
 	snapshotter string
@@ -82,6 +84,8 @@ func (udc *DaemonUpdateCommand) addFlags() {
 	flagSet.BoolVar(&udc.iptables, "iptables", true, "update daemon with iptables")
 	flagSet.BoolVar(&udc.ipforward, "ipforward", true, "udpate daemon with ipforward")
 	flagSet.BoolVar(&udc.userlandProxy, "userland-proxy", false, "update daemon with userland proxy")
+	flagSet.StringVar(&udc.logMaxFile, "log-opt-max-file", "", "update daemon max-file configured in default-log-config.Config")
+	flagSet.StringVar(&udc.logMaxSize, "log-opt-max-size", "", "update daemon max-size configured in default-log-config.Config")
 	flagSet.StringVar(&udc.homeDir, "home-dir", "", "update daemon home dir")
 	flagSet.StringVar(&udc.snapshotter, "snapshotter", "", "update daemon snapshotter")
 }
@@ -175,6 +179,20 @@ func (udc *DaemonUpdateCommand) updateDaemonConfigFile() error {
 
 	if flagSet.Changed("userland-proxy") {
 		daemonConfig.NetworkConfig.BridgeConfig.UserlandProxy = udc.userlandProxy
+	}
+
+	if flagSet.Changed("log-opt-max-file") {
+		if daemonConfig.DefaultLogConfig.LogOpts == nil {
+			daemonConfig.DefaultLogConfig.LogOpts = make(map[string]string)
+		}
+		daemonConfig.DefaultLogConfig.LogOpts["max-file"] = udc.logMaxFile
+	}
+
+	if flagSet.Changed("log-opt-max-size") {
+		if daemonConfig.DefaultLogConfig.LogOpts == nil {
+			daemonConfig.DefaultLogConfig.LogOpts = make(map[string]string)
+		}
+		daemonConfig.DefaultLogConfig.LogOpts["max-size"] = udc.logMaxSize
 	}
 
 	if flagSet.Changed("home-dir") {
