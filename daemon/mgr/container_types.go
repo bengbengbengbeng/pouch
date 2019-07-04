@@ -275,6 +275,9 @@ type Container struct {
 
 	// SnapshotID specify id of the snapshot that container using.
 	SnapshotID string
+
+	// SnapshotMounts
+	SnapshotMounts []mount.Mount
 }
 
 // Key returns container's id.
@@ -441,30 +444,53 @@ func (c *Container) UnsetMergedDir() {
 
 // SetSnapshotterMeta sets snapshotter for container
 func (c *Container) SetSnapshotterMeta(mounts []mount.Mount) {
-	// TODO(ziren): now we only support overlayfs
-	data := make(map[string]string)
-	for _, opt := range mounts[0].Options {
-		if strings.HasPrefix(opt, "upperdir=") {
-			data["UpperDir"] = strings.TrimPrefix(opt, "upperdir=")
+	// keep mounts for sometimes need get content from snapshot
+	var (
+		data        = make(map[string]string)
+		snapshotter = ctrd.CurrentSnapshotterName(context.TODO())
+	)
+
+	switch snapshotter {
+	case "devmapper", "aufs", "btrfs", "zfs":
+		// empty snapshot data
+
+	default:
+		// we deal default as overlayfs for compatible
+		if len(mounts) == 0 {
+			break
 		}
-		if strings.HasPrefix(opt, "lowerdir=") {
-			data["LowerDir"] = strings.TrimPrefix(opt, "lowerdir=")
-		}
-		if strings.HasPrefix(opt, "workdir=") {
-			data["WorkDir"] = strings.TrimPrefix(opt, "workdir=")
+		for _, opt := range mounts[0].Options {
+			if strings.HasPrefix(opt, "upperdir=") {
+				data["UpperDir"] = strings.TrimPrefix(opt, "upperdir=")
+			}
+			if strings.HasPrefix(opt, "lowerdir=") {
+				data["LowerDir"] = strings.TrimPrefix(opt, "lowerdir=")
+			}
+			if strings.HasPrefix(opt, "workdir=") {
+				data["WorkDir"] = strings.TrimPrefix(opt, "workdir=")
+			}
 		}
 	}
 
+	c.SnapshotMounts = mounts
 	c.Snapshotter = &types.SnapshotterData{
-		Name: ctrd.CurrentSnapshotterName(context.TODO()),
+		Name: snapshotter,
 		Data: data,
 	}
 }
 
 // GetSpecificBasePath accepts a given path, look for whether the path is exist
 // within container, if has, returns container base path like BaseFS, if not, return empty string
-func (c *Container) GetSpecificBasePath(path string) string {
-	logrus.Debugf("GetSpecificBasePath, snapshotter data: (%v)", c.Snapshotter.Data)
+func (c *Container) GetSpecificBasePath(prefixPath, path string) string {
+	logrus.Debugf("GetSpecificBasePath with prefixPath (%s) snapshotter data: (%v)", prefixPath, c.Snapshotter.Data)
+
+	if prefixPath != "" {
+		absPath := filepath.Join(prefixPath, path)
+		if utils.IsFileExist(absPath) {
+			return absPath
+		}
+		return ""
+	}
 
 	// try lower and upper directory, since overlay filesystem support only.
 	for _, key := range []string{"MergedDir", "UpperDir", "LowerDir"} {

@@ -75,8 +75,8 @@ func (mgr *ContainerManager) StartExec(ctx context.Context, execid string, cfg *
 		execConfig.User = c.Config.User
 	}
 
-	uid, gid, additionalGids, err := user.Get(c.GetSpecificBasePath(user.PasswdFile),
-		c.GetSpecificBasePath(user.GroupFile), execConfig.User, c.HostConfig.GroupAdd)
+	uid, gid, additionalGids, err := user.Get(c.GetSpecificBasePath("", user.PasswdFile),
+		c.GetSpecificBasePath("", user.GroupFile), execConfig.User, c.HostConfig.GroupAdd)
 	if err != nil {
 		return err
 	}

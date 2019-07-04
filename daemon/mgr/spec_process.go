@@ -3,10 +3,15 @@ package mgr
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/alibaba/pouch/apis/types"
 	"github.com/alibaba/pouch/pkg/user"
+	"github.com/containerd/containerd/mount"
+	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/daemon/caps"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -70,8 +75,55 @@ func createEnvironment(c *Container) []string {
 }
 
 func setupUser(ctx context.Context, c *Container, s *specs.Spec) (err error) {
-	uid, gid, additionalGids, err := user.Get(c.GetSpecificBasePath(user.PasswdFile),
-		c.GetSpecificBasePath(user.GroupFile), c.Config.User, c.HostConfig.GroupAdd)
+	// if use block graphdriver, can not find file in host, need to mount block
+	// to a target
+	passwdPath := c.GetSpecificBasePath("", user.PasswdFile)
+	groupPath := c.GetSpecificBasePath("", user.GroupFile)
+
+	tmpMount := func(target string) error {
+		if target == "" {
+			return fmt.Errorf("mount target can not be empty")
+		}
+		if len(c.SnapshotMounts) == 0 {
+			return fmt.Errorf("container snapshot mount can not be empty")
+		}
+		err = os.MkdirAll(target, 0755)
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
+		for _, m := range c.SnapshotMounts {
+			if err := m.Mount(target); err != nil {
+				os.RemoveAll(target)
+				return err
+			}
+		}
+		return nil
+	}
+
+	tmpUmount := func(target string) {
+		for i := 0; i < 10; i++ {
+			if err := mount.Unmount(target, 0); err != nil {
+				logrus.Warnf("failed to umount mountfs(%s) in %d times: %s", target, i+1, err)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		if err := os.RemoveAll(target); err != nil {
+			logrus.Warnf("failed to remove target %s: %s", target, err)
+		}
+	}
+
+	if passwdPath == "" || groupPath == "" {
+		target, _ := ioutil.TempDir("", "pouch-user")
+		if em := tmpMount(target); em == nil {
+			defer tmpUmount(target)
+			passwdPath = c.GetSpecificBasePath(target, user.PasswdFile)
+			groupPath = c.GetSpecificBasePath(target, user.GroupFile)
+			logrus.Infof("graphdriver is block, mount to (%s) get image content", target)
+		}
+	}
+
+	uid, gid, additionalGids, err := user.Get(passwdPath, groupPath, c.Config.User, c.HostConfig.GroupAdd)
 	if err != nil {
 		return err
 	}
