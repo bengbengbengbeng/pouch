@@ -33,7 +33,7 @@ func updateNetworkEnv(createConfig *apitypes.ContainerCreateConfig, meta *crityp
 	netNSPath := meta.NetNS
 
 	// skip kata container and nanovisor
-	if meta.Runtime == "kata-runtime" || meta.Runtime == "runsc" {
+	if strings.HasPrefix(meta.Runtime, "kata-") || meta.Runtime == "runsc" {
 		return nil
 	}
 
