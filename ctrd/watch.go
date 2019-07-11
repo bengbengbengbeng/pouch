@@ -126,16 +126,17 @@ func (w *watch) add(pack *containerPack) {
 		skipCleanup := pack.skipStopHooks
 		pack.l.RUnlock()
 		if !skipCleanup {
+			// if stop container was triggered, skipStopHooks will be set to true, cleanup logic will be invoke by stop
+			// routine.
+			// first cleanup container resource, then network
+			cleanupFunc()
+
 			for _, hook := range w.hooks {
 				if err := hook(pack.id, msg, cleanupFunc); err != nil {
 					logrus.Errorf("failed to execute the exit hooks: %v", err)
 					break
 				}
 			}
-
-			// if stop container was triggered, skipStopHooks will be set to true, cleanup logic will be invoke by stop
-			// routine.
-			cleanupFunc()
 		}
 
 		pack.ch <- msg
